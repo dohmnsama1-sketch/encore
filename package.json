@@ -1,0 +1,9 @@
+{
+  "name": "encore",
+  "version": "1.0.0",
+  "description": "Encore: the AI programming director for independent venues. Knows what your crowd loves (Qloo taste graph) and plans a month of events that fill the room.",
+  "main": "server.js",
+  "scripts": { "start": "node server.js", "test": "node --test test/", "mcp": "node src/mcp.js" },
+  "engines": { "node": ">=18" },
+  "license": "MIT"
+}

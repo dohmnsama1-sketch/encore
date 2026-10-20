@@ -1,0 +1,36 @@
+const $ = s => document.querySelector(s); let last = null;
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+fetch('/api/status').then(r => r.json()).then(s => { $('#mode').textContent = s.qloo === 'live' ? `Qloo live · ${s.llm ? 'LLM on' : 'template writer'}` : 'SAMPLE DATA (not Qloo): add QLOO_API_KEY'; });
+document.querySelectorAll('.examples a').forEach(a => a.onclick = () => { $('#f').venue.value = a.dataset.v; $('#f').city.value = a.dataset.c; });
+$('#f').onsubmit = async e => {
+  e.preventDefault(); const f = e.target; const btn = f.querySelector('button'); btn.disabled = true; btn.textContent = 'Reading your crowd…';
+  try {
+    const r = await fetch('/api/plan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ venue: f.venue.value, city: f.city.value, goal: f.goal.value, weeks: f.weeks.value }) });
+    const j = await r.json(); if (j.error) throw new Error(j.error); last = j; render(j);
+  } catch (err) { alert(err.message); } finally { btn.disabled = false; btn.textContent = 'Plan my month →'; }
+};
+const LBL = { artist: 'Live music & DJs', movie: 'Screenings', podcast: 'Talks & podcasts', book: 'Book club', tv_show: 'Watch parties', video_game: 'Game nights', brand: 'Brand collabs', place: 'Neighbour partners' };
+function render(j) {
+  $('#out').classList.remove('hidden');
+  $('#steps').innerHTML = j.steps.map(s => `<li><code>${esc(s.tool)}</code> ${esc(s.detail)}</li>`).join('') + `<li><code>done</code> ${j.qlooCalls} Qloo calls</li>`;
+  $('#venue').innerHTML = `${esc(j.venue.name)}<small>${esc(j.venue.address || j.city)}</small>`;
+  $('#tags').innerHTML = (j.tags.length ? j.tags.slice(0, 14) : [{ name: 'taste tags unavailable' }]).map(t => `<span>${esc(t.name)}</span>`).join('');
+  $('#cal').innerHTML = j.calendar.map(e => `<div class="ev"><div class="d">Week ${e.week} · ${e.day} · ${esc(e.format)}</div><h3>${esc(e.title)}</h3><p>${esc(e.promo)}</p><div class="w">★ ${esc(e.why)}</div></div>`).join('');
+  $('#lanes').innerHTML = j.lanes.map(l => `<div class="lane"><h3>${LBL[l]}</h3><ol>${(j.lanesData[l] || []).slice(0, 6).map(x => `<li><span>${esc(x.name)}</span>${x.affinity != null ? `<span><i class="bar" style="width:${Math.round(x.affinity * 50)}px"></i> ${Math.round(x.affinity * 100)}</span>` : ''}</li>`).join('') || '<li>No data</li>'}</ol></div>`).join('');
+  $('#outreach').innerHTML = j.outreach.map((o, i) => `<div class="pitch"><b>${esc(o.kind)} → ${esc(o.to)}</b><div class="w"><small>${esc(o.why)}</small></div><p>${esc(o.draft)}</p><button class="ghost" data-i="${i}">Copy</button></div>`).join('') || 'No partners found.';
+  $('#outreach').onclick = e => { if (e.target.dataset.i) navigator.clipboard.writeText(j.outreach[e.target.dataset.i].draft); };
+  $('#vsPanel').classList.toggle('hidden', !j.generic); $('#vsPanel').parentElement.style.gridTemplateColumns = j.generic ? '' : '1fr';
+  if (j.generic) $('#vs').innerHTML = `<div class="vs"><div><h4>Plain LLM (guessing)</h4>${j.generic.map(x => `<p>${esc(x)}</p>`).join('')}</div><div><h4>Encore (knows)</h4>${j.calendar.slice(0, 4).map(e => `<p><b>${esc(e.title)}</b><br><small>${esc(e.why)}</small></p>`).join('')}</div></div>`;
+  $('#out').scrollIntoView({ behavior: 'smooth' });
+}
+$('#ics').onclick = () => {
+  if (!last) return; const start = new Date(); const pad = n => String(n).padStart(2, '0');
+  const dt = d => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T190000`;
+  const next = (w, day) => { const d = new Date(start); const target = day === 'Thu' ? 4 : 6; d.setDate(d.getDate() + ((target - d.getDay() + 7) % 7 || 7) + (w - 1) * 7); return d; };
+  const ev = last.calendar.map((e, i) => `BEGIN:VEVENT\nUID:encore-${i}-${Date.now()}@encore\nDTSTAMP:${dt(start)}Z\nDTSTART:${dt(next(e.week, e.day))}\nSUMMARY:${e.title.replace(/[,;]/g, ' ')}\nDESCRIPTION:${(e.promo + ' | ' + e.why).replace(/[,;\n]/g, ' ')}\nEND:VEVENT`).join('\n');
+  const blob = new Blob([`BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Encore//EN\n${ev}\nEND:VCALENDAR`], { type: 'text/calendar' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${last.venue.name}-encore.ics`; a.click();
+};
+// Shareable links: /?venue=Blue%20Note&city=New%20York&goal=... auto-runs the plan.
+const qp = new URLSearchParams(location.search);
+if (qp.get('venue') && qp.get('city')) { const f = $('#f'); f.venue.value = qp.get('venue'); f.city.value = qp.get('city'); f.goal.value = qp.get('goal') || ''; f.requestSubmit(); }

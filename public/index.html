@@ -1,0 +1,30 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Encore: the AI programming director for independent venues</title><link rel="stylesheet" href="styles.css"><link rel="icon" href="logo.svg"></head>
+<body>
+<header><div class="brand"><img src="logo.svg" alt=""><b>Encore</b></div><span id="mode" class="mode"></span></header>
+<section class="hero">
+  <h1>Know what your crowd loves.<br><span>Fill every night.</span></h1>
+  <p>Encore reads the cultural taste of the people who already love your venue (from Qloo's taste graph of 250M+ entities). Then it plans a month of bookings, screenings, talks, collabs and neighbour partnerships they'll actually show up for.</p>
+  <form id="f">
+    <input name="venue" placeholder="Your venue (e.g. Blue Note)" required>
+    <input name="city" placeholder="City (e.g. New York)" required>
+    <input name="goal" placeholder="Goal (e.g. fill quiet Thursdays, attract students)">
+    <select name="weeks"><option value="4">4 weeks</option><option value="2">2 weeks</option><option value="6">6 weeks</option></select>
+    <button>Plan my month →</button>
+  </form>
+  <div class="examples">Try: <a data-v="Blue Note" data-c="New York">Blue Note · New York</a> <a data-v="Ronnie Scott's" data-c="London">Ronnie Scott's · London</a> <a data-v="The Troubadour" data-c="Los Angeles">Troubadour · LA</a></div>
+</section>
+<main id="out" class="hidden">
+  <section class="row2">
+    <div class="panel"><h2>Agent trace</h2><ol id="steps" class="steps"></ol></div>
+    <div class="panel"><h2>Your crowd's taste DNA</h2><div id="venue" class="venue"></div><div id="tags" class="chips"></div></div>
+  </section>
+  <section class="panel"><div class="ph"><h2>Your month, programmed</h2><button id="ics" class="ghost">Download calendar (.ics)</button></div><div id="cal" class="cal"></div></section>
+  <section class="panel"><h2>Why these? What your crowd over-indexes on</h2><div id="lanes" class="lanes"></div></section>
+  <section class="row2">
+    <div class="panel"><h2>Partner pitches, ready to send</h2><div id="outreach"></div></div>
+    <div class="panel" id="vsPanel"><h2>Generic AI guess vs Encore</h2><div id="vs"></div></div>
+  </section>
+</main>
+<footer>Powered by the <b>Qloo</b> Taste AI™ API · Open source (MIT)</footer>
+<script src="app.js"></script></body></html>
