@@ -8,7 +8,7 @@ const LANES = {
   podcast: { type: 'urn:entity:podcast', label: 'Talks & podcasts', format: 'Live listening + Q&A' },
   book:    { type: 'urn:entity:book',    label: 'Book club',        format: 'Book club' },
   tv_show: { type: 'urn:entity:tv_show', label: 'Watch parties',    format: 'Watch party' },
-  video_game: { type: 'urn:entity:video_game', label: 'Game nights', format: 'Game night' },
+  video_game: { type: 'urn:entity:videogame', label: 'Game nights', format: 'Game night' },
   brand:   { type: 'urn:entity:brand',   label: 'Brand collabs',    format: 'Pop-up collab' },
   place:   { type: 'urn:entity:place',   label: 'Neighbour partners', format: 'Cross-promo' },
 };
@@ -62,6 +62,7 @@ function personas(tags) {
   return out;
 }
 
+const short = n => { const s = String(n || '').split(/\s+--\s+|:\s/)[0].trim(); return s.length > 60 ? s.slice(0, 57).replace(/\s+\S*$/, '') + '…' : s; };
 function why(e) {
   const a = e.affinity != null ? `${Math.round(e.affinity * 100)}% affinity with your crowd` : 'high affinity with your crowd';
   return a + (e.popularity != null ? `, popularity ${Math.round(e.popularity * 100)}th pct` : '');
@@ -75,7 +76,7 @@ function composeHeuristic({ venue, lanesData, weeks = 4 }) {
     while (tries++ < order.length && !pick) { lane = order[i++ % order.length]; pick = pools[lane].shift(); }
     if (!pick) continue;
     const L = LANES[lane];
-    events.push({ week: w, day: d, lane, format: L.format, anchor: pick.name, anchorId: pick.id, score: score(pick), title: `${L.format}: ${pick.name}${lane === 'artist' ? ' & friends' : ''}`,
+    events.push({ week: w, day: d, lane, format: L.format, anchor: pick.name, anchorId: pick.id, score: score(pick), title: `${L.format}: ${short(pick.name)}${lane === 'artist' ? ' & friends' : ''}`,
       why: why(pick), promo: `${d} at ${venue.name}: ${L.format.toLowerCase()} built around ${pick.name}, chosen because your regulars over-index on it. Doors 7pm.` });
   }
   const brand = (lanesData.brand || [])[0], place = (lanesData.place || [])[0];
@@ -106,9 +107,9 @@ async function genericGuess(venue, goal, env) {
 async function run({ qloo, venueQuery, city, goal = '', weeks = 4, env = process.env, onStep = () => {} }) {
   const step = (tool, detail, data) => onStep({ ts: Date.now(), tool, detail, data });
   step('qloo.search', `Finding "${venueQuery}" in ${city}`);
-  const found = await qloo.searchPlace(`${venueQuery} ${city}`.trim());
+  const found = await qloo.searchPlace(venueQuery, city);
   if (!found.length) throw new Error(`Couldn't find "${venueQuery}" in Qloo. Try the exact venue name and city.`);
-  const venue = found[0]; step('qloo.search', `Matched ${venue.name}`, { venue });
+  const venue = found[0]; step('qloo.search', `Matched ${venue.name}${venue.address ? ' · ' + venue.address : ''}`, { venue, alternatives: found.slice(1, 4).map(f => ({ name: f.name, address: f.address })) });
   const tags = await qloo.tasteTags(venue.id); step('qloo.taste', `Crowd taste: ${tags.slice(0, 6).map(t => t.name).join(', ') || '(not available)'}`, { tags });
   const plan = await planLanes(goal, venue, tags, env); step('plan', `Exploring ${plan.lanes.map(l => LANES[l].label).join(' · ')} (${plan.by})`, plan);
   const lanesData = {};
@@ -120,10 +121,14 @@ async function run({ qloo, venueQuery, city, goal = '', weeks = 4, env = process
   }));
   const plan2 = await compose({ venue, lanesData, weeks, goal }, env); step('compose', `Drafted ${plan2.events.length} events and ${plan2.outreach.length} partner pitches (${plan2.by})`);
   // Taste twins: venues anywhere whose crowd overlaps with this one (no location filter). Their programme is a proven playbook.
+  // Prefer rooms in other cities (a proven playbook elsewhere); fall back to same-city rooms not already pitched.
   let twins = [];
-  try { twins = (await qloo.insights({ 'filter.type': 'urn:entity:place', 'signal.interests.entities': venue.id, 'filter.exclude.entities': venue.id, take: 6 }))
-      .filter(t => t.id !== venue.id && !(lanesData.place || []).some(p => p.id === t.id)).slice(0, 5);
-    step('qloo.insights', `Taste twins worldwide: ${twins.slice(0, 3).map(t => t.name).join(', ') || 'none'}`, { twins: twins.length }); }
+  try { const local = new Set((lanesData.place || []).map(p => p.id)); const seen = new Set([venue.name]);
+    const cand = (await qloo.insights({ 'filter.type': 'urn:entity:place', 'signal.interests.entities': venue.id, 'filter.exclude.entities': venue.id, take: 50 }))
+      .filter(t => t.id !== venue.id && !local.has(t.id) && !seen.has(t.name) && seen.add(t.name));
+    const away = cand.filter(t => t.metro && venue.metro ? t.metro !== venue.metro : t.city !== venue.city);
+    twins = (away.length ? away : cand).slice(0, 5);
+    step('qloo.insights', `Taste twins${away.length ? ' worldwide' : ' nearby'}: ${twins.slice(0, 3).map(t => t.name + (t.city ? ' (' + t.city + ')' : '')).join(', ') || 'none'}`, { twins: twins.length }); }
   catch (e) { step('qloo.insights', `Taste twins unavailable (${e.message})`); }
   const summary = programmeSummary(plan2.events); step('score', `Programme fit ${summary.avgFit ?? 'n/a'}/100 · ${summary.hiddenGems} hidden gems · ${summary.lanes} formats · ${summary.repeats} repeats`);
   const generic = enabled(env) ? await genericGuess(venue, goal, env) : null;

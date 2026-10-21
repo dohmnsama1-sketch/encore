@@ -35,3 +35,18 @@ test('run returns taste twins, personas and a scored programme', async () => {
   assert.ok(r.calendar.every(e => e.score && typeof e.score.fit === 'number'));
   assert.equal(r.summary.repeats, 0);
 });
+
+const { rankPlaces, nameScore } = require('../src/qloo');
+test('venue resolution prefers the exact venue over a big landmark in the same city', () => {
+  const list = [
+    { id: 'lacc', name: 'Los Angeles Convention Center', city: 'Los Angeles', metro: 'Los Angeles' },
+    { id: 'trl', name: 'Troubadour', city: 'London', metro: 'London' },
+    { id: 'trw', name: 'Troubadour', city: 'West Hollywood', metro: 'Los Angeles' },
+  ];
+  assert.strictEqual(rankPlaces(list, 'The Troubadour', 'Los Angeles')[0].id, 'trw');
+  assert.strictEqual(rankPlaces(list, 'Troubadour', 'London')[0].id, 'trl');
+  assert.ok(nameScore("Ronnie Scott's", 'Ronnie Scotts') >= 3);
+});
+test('game lane uses the entity type the hackathon API accepts', () => {
+  assert.strictEqual(director.LANES.video_game.type, 'urn:entity:videogame');
+});
