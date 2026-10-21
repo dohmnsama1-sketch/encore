@@ -4,6 +4,12 @@
 
 Independent bars, cafés, bookshops and small music rooms live or die by their event calendar. Owners guess at it, and generic LLMs guess too. They suggest "trivia night" and "open mic" to everyone. Encore *knows*. It reads the cultural taste of the people who already love your venue from **Qloo's taste graph** and turns it into a month of events your regulars over-index on, plus partner pitches to the brands and neighbours that share your crowd.
 
+## New in v1.1
+- Programme scorecard (crowd fit, Hidden gems, formats, repeats), computed only from Qloo affinity/popularity
+- Taste twins worldwide (place insights with no location filter)
+- Crowd personas from taste tags
+- One-click SVG poster per night
+
 ## What the agent does
 1. **Find the venue.** `GET /search` (type `urn:entity:place`) resolves the real venue entity.
 2. **Read the crowd's taste DNA.** `GET /v2/insights` (taste tags) is signalled by the venue entity.

@@ -31,6 +31,37 @@ async function planLanes(goal, venue, tags, env) {
   return { lanes: planLanesHeuristic(goal), why: 'Default lanes for the stated goal', by: 'rules' };
 }
 
+// Transparent scoring, computed only from Qloo's own affinity and popularity fields.
+// fit = how strongly this crowd over-indexes on the anchor; reach = how widely known it is.
+function score(e) {
+  const fit = e.affinity != null ? Math.round(e.affinity * 100) : null;
+  const reach = e.popularity != null ? Math.round(e.popularity * 100) : null;
+  let label = 'Strong fit';
+  if (fit != null && reach != null) {
+    if (fit >= 80 && reach < 60) label = 'Hidden gem';          // loved by THIS crowd, not yet mainstream: easier to book, feels like discovery
+    else if (fit >= 80) label = 'Crowd favourite';
+    else if (fit < 60) label = 'Stretch pick';
+  }
+  return { fit, reach, label };
+}
+
+function programmeSummary(events) {
+  const fits = events.map(e => e.score && e.score.fit).filter(x => x != null);
+  const avg = fits.length ? Math.round(fits.reduce((a, b) => a + b, 0) / fits.length) : null;
+  return { nights: events.length, avgFit: avg, hiddenGems: events.filter(e => e.score && e.score.label === 'Hidden gem').length,
+    lanes: [...new Set(events.map(e => e.lane))].length, repeats: events.length - new Set(events.map(e => e.anchor)).size };
+}
+
+// Crowd personas from Qloo taste tags (no invented data: every persona is built from returned tags).
+function personas(tags) {
+  const t = tags.filter(x => x && x.name).slice(0, 9); const out = [];
+  for (let i = 0; i < t.length && out.length < 3; i += 3) {
+    const g = t.slice(i, i + 3); if (!g.length) break;
+    out.push({ name: `The ${g[0].name} crowd`, tags: g.map(x => x.name), hook: `Lead with ${g.map(x => x.name.toLowerCase()).join(' + ')} in the copy and visuals.` });
+  }
+  return out;
+}
+
 function why(e) {
   const a = e.affinity != null ? `${Math.round(e.affinity * 100)}% affinity with your crowd` : 'high affinity with your crowd';
   return a + (e.popularity != null ? `, popularity ${Math.round(e.popularity * 100)}th pct` : '');
@@ -44,7 +75,7 @@ function composeHeuristic({ venue, lanesData, weeks = 4 }) {
     while (tries++ < order.length && !pick) { lane = order[i++ % order.length]; pick = pools[lane].shift(); }
     if (!pick) continue;
     const L = LANES[lane];
-    events.push({ week: w, day: d, lane, format: L.format, anchor: pick.name, anchorId: pick.id, title: `${L.format}: ${pick.name}${lane === 'artist' ? ' & friends' : ''}`,
+    events.push({ week: w, day: d, lane, format: L.format, anchor: pick.name, anchorId: pick.id, score: score(pick), title: `${L.format}: ${pick.name}${lane === 'artist' ? ' & friends' : ''}`,
       why: why(pick), promo: `${d} at ${venue.name}: ${L.format.toLowerCase()} built around ${pick.name}, chosen because your regulars over-index on it. Doors 7pm.` });
   }
   const brand = (lanesData.brand || [])[0], place = (lanesData.place || [])[0];
@@ -88,7 +119,14 @@ async function run({ qloo, venueQuery, city, goal = '', weeks = 4, env = process
     catch (e) { lanesData[lane] = []; step('qloo.insights', `${LANES[lane].label}: unavailable (${e.message})`, { lane }); }
   }));
   const plan2 = await compose({ venue, lanesData, weeks, goal }, env); step('compose', `Drafted ${plan2.events.length} events and ${plan2.outreach.length} partner pitches (${plan2.by})`);
+  // Taste twins: venues anywhere whose crowd overlaps with this one (no location filter). Their programme is a proven playbook.
+  let twins = [];
+  try { twins = (await qloo.insights({ 'filter.type': 'urn:entity:place', 'signal.interests.entities': venue.id, 'filter.exclude.entities': venue.id, take: 6 }))
+      .filter(t => t.id !== venue.id && !(lanesData.place || []).some(p => p.id === t.id)).slice(0, 5);
+    step('qloo.insights', `Taste twins worldwide: ${twins.slice(0, 3).map(t => t.name).join(', ') || 'none'}`, { twins: twins.length }); }
+  catch (e) { step('qloo.insights', `Taste twins unavailable (${e.message})`); }
+  const summary = programmeSummary(plan2.events); step('score', `Programme fit ${summary.avgFit ?? 'n/a'}/100 · ${summary.hiddenGems} hidden gems · ${summary.lanes} formats · ${summary.repeats} repeats`);
   const generic = enabled(env) ? await genericGuess(venue, goal, env) : null;
-  return { venue, city, goal, tags, lanes: plan.lanes, lanesData, calendar: plan2.events, outreach: plan2.outreach, generic, qlooCalls: qloo.calls };
+  return { venue, city, goal, tags, personas: personas(tags), lanes: plan.lanes, lanesData, calendar: plan2.events, outreach: plan2.outreach, twins, summary, generic, qlooCalls: qloo.calls };
 }
-module.exports = { run, LANES, planLanesHeuristic, composeHeuristic };
+module.exports = { run, LANES, planLanesHeuristic, composeHeuristic, score, programmeSummary, personas };

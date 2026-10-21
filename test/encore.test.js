@@ -20,3 +20,18 @@ test('Qloo client builds correct hackathon requests', async () => {
     assert.match(seen[0].url, /filter\.type=urn%3Aentity%3Aartist/); }
   finally { global.fetch = orig; }
 });
+test('scores are derived only from Qloo affinity/popularity and summarised', () => {
+  assert.deepEqual(director.score({ affinity: 0.92, popularity: 0.3 }), { fit: 92, reach: 30, label: 'Hidden gem' });
+  assert.equal(director.score({ affinity: 0.9, popularity: 0.9 }).label, 'Crowd favourite');
+  assert.equal(director.score({ affinity: 0.5, popularity: 0.9 }).label, 'Stretch pick');
+  assert.equal(director.score({}).fit, null);
+  const s = director.programmeSummary([{ anchor: 'a', lane: 'artist', score: { fit: 90, label: 'Hidden gem' } }, { anchor: 'b', lane: 'movie', score: { fit: 70, label: 'Strong fit' } }]);
+  assert.deepEqual(s, { nights: 2, avgFit: 80, hiddenGems: 1, lanes: 2, repeats: 0 });
+});
+test('run returns taste twins, personas and a scored programme', async () => {
+  const r = await director.run({ qloo: new StubQloo(), venueQuery: 'Blue Lantern', city: 'Austin', goal: 'fill Thursdays', env: {} });
+  assert.ok(r.twins.length >= 1 && r.twins.every(t => t.id !== r.venue.id));
+  assert.ok(r.personas.length >= 1 && r.personas[0].tags.length >= 1);
+  assert.ok(r.calendar.every(e => e.score && typeof e.score.fit === 'number'));
+  assert.equal(r.summary.repeats, 0);
+});

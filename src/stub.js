@@ -8,6 +8,8 @@ class StubQloo {
   constructor() { this.calls = 0; this.stub = true; }
   async searchPlace(q) { this.calls++; return [{ id: 'stub-venue', name: q.split(' ').slice(0, 3).join(' ') || 'Sample Venue', type: 'urn:entity:place', address: 'Sample City' }]; }
   async tasteTags() { this.calls++; return ['Indie', 'Jazz', 'Cocktail bar', 'Vinyl', 'Late night', 'Date night'].map((name, i) => ({ id: `t${i}`, name, affinity: 0.9 - i * 0.07 })); }
-  async insights(p) { this.calls++; return (N[p['filter.type']] || []).map((name, i) => ({ id: `${p['filter.type']}:${i}`, name, type: p['filter.type'], affinity: +(0.95 - i * 0.06).toFixed(2), popularity: +(0.7 - i * 0.05).toFixed(2), tags: [] })); }
+  async insights(p) { this.calls++;
+    if (p['filter.type'] === 'urn:entity:place' && !p['filter.location.query']) return ['Sample Twin Club (Lisbon)', 'Sample Twin Bar (Berlin)', 'Sample Twin Room (Melbourne)'].map((name, i) => ({ id: `twin:${i}`, name, type: 'urn:entity:place', affinity: +(0.9 - i * 0.05).toFixed(2), popularity: 0.5, tags: [] }));
+    return (N[p['filter.type']] || []).map((name, i) => ({ id: `${p['filter.type']}:${i}`, name, type: p['filter.type'], affinity: +(0.95 - i * 0.06).toFixed(2), popularity: +(0.75 - i * 0.12).toFixed(2), tags: [] })); }
 }
 module.exports = { StubQloo };
