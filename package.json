@@ -1,9 +1,19 @@
 {
   "name": "encore",
-  "version": "1.0.0",
-  "description": "Encore: the AI programming director for independent venues. Knows what your crowd loves (Qloo taste graph) and plans a month of events that fill the room.",
+  "version": "2.0.0",
+  "description": "Encore: the AI programming director for independent venues. Reads your crowd's cultural taste from Qloo's taste graph and programmes a month of nights they over-index on.",
   "main": "server.js",
-  "scripts": { "start": "node server.js", "test": "node --test test/", "mcp": "node src/mcp.js" },
+  "bin": { "encore-mcp": "bin/encore-mcp.js" },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test test/",
+    "mcp": "node bin/encore-mcp.js",
+    "check:secrets": "node scripts/check-secrets.js"
+  },
   "engines": { "node": ">=18" },
+  "repository": { "type": "git", "url": "https://github.com/dohmnsama1-sketch/encore.git" },
+  "keywords": ["qloo", "agent", "mcp", "taste", "venues", "events", "hackathon"],
+  "author": "Dodi Abak",
   "license": "MIT"
 }

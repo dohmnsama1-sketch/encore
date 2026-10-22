@@ -1,34 +1,159 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Encore: the AI programming director for independent venues</title><link rel="stylesheet" href="styles.css"><link rel="icon" href="logo.svg"></head>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Encore — your crowd's taste, programmed into a sold-out month</title>
+<meta name="description" content="Encore is an AI programming director for independent venues. It reads your crowd's cultural taste from Qloo's taste graph and plans a month of nights they'll actually show up for.">
+<meta property="og:title" content="Encore — agents, but with taste, for independent venues">
+<meta property="og:description" content="Type your venue. Encore reads what your crowd loves (Qloo) and programmes a month of nights, with the reasons, partners and flyer zones.">
+<meta property="og:image" content="/og.png">
+<meta name="theme-color" content="#0b0a12">
+<link rel="icon" href="/logo.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
 <body>
-<header><div class="brand"><img src="logo.svg" alt=""><b>Encore</b></div><span id="mode" class="mode"></span></header>
+<a class="skip" href="#main">Skip to content</a>
+<header class="nav">
+  <a class="brand" href="/" aria-label="Encore home"><img src="/logo.svg" alt="" width="28" height="28"><span>Encore</span></a>
+  <nav>
+    <span id="mode" class="pill" title="Data source">connecting…</span>
+    <a href="#mcp" class="navlink">Use from your agent</a>
+    <a href="https://github.com/dohmnsama1-sketch/encore" class="navlink" target="_blank" rel="noopener">GitHub</a>
+  </nav>
+</header>
+
+<main id="main">
 <section class="hero">
-  <h1>Know what your crowd loves.<br><span>Fill every night.</span></h1>
-  <p>Encore reads the cultural taste of the people who already love your venue (from Qloo's taste graph of 250M+ entities). Then it plans a month of bookings, screenings, talks, collabs and neighbour partnerships they'll actually show up for.</p>
-  <form id="f">
-    <input name="venue" placeholder="Your venue (e.g. Blue Note)" required>
-    <input name="city" placeholder="City (e.g. New York)" required>
-    <input name="goal" placeholder="Goal (e.g. fill quiet Thursdays, attract students)">
-    <select name="weeks"><option value="4">4 weeks</option><option value="2">2 weeks</option><option value="6">6 weeks</option></select>
-    <button>Plan my month →</button>
+  <p class="eyebrow">AI programming director for independent venues · powered by Qloo's taste graph</p>
+  <h1>Your crowd already told the world what they love.<br><em>Encore turns it into a sold-out month.</em></h1>
+  <p class="lede">Ask a generic AI how to fill a quiet Tuesday and you get "trivia night" — the same answer for every venue on earth. Encore reads the cultural taste of the people who already love <b>your</b> room, tests genres against them, and programmes nights they over-index on. Every pick shows its Qloo score.</p>
+
+  <form id="f" class="card form" autocomplete="off">
+    <div class="grid2">
+      <label>Your venue<input name="venue" placeholder="e.g. Smalls Jazz Club" required maxlength="100"></label>
+      <label>City<input name="city" placeholder="e.g. New York" maxlength="60"></label>
+    </div>
+    <label>Your goal<input name="goal" placeholder="e.g. fill quiet nights and attract students" maxlength="200"></label>
+    <div class="grid2">
+      <fieldset class="days"><legend>Quiet nights to fill</legend>
+        <div id="days" role="group" aria-label="Nights"></div>
+      </fieldset>
+      <label><span>Gut-check your own idea <span class="opt">(optional)</span></span><input name="idea" placeholder="e.g. salsa night" maxlength="60"></label>
+    </div>
+    <div class="row">
+      <label class="inline">Plan <select name="weeks"><option value="4">4 weeks</option><option value="2">2 weeks</option><option value="6">6 weeks</option></select></label>
+      <button class="cta" id="go" type="submit">Programme my month <span aria-hidden="true">→</span></button>
+    </div>
+    <div class="presets">Try a real venue:
+      <button type="button" data-v="Smalls Jazz Club" data-c="New York" data-g="fill quiet Tuesdays and Wednesdays, attract younger fans" data-i="salsa night">Smalls · New York</button>
+      <button type="button" data-v="Ronnie Scott's" data-c="London" data-g="fill Monday and Tuesday nights" data-i="hip hop">Ronnie Scott's · London</button>
+      <button type="button" data-v="Shakespeare and Company" data-c="Paris" data-g="evening events for readers on Wednesdays and Thursdays" data-i="poetry">Shakespeare and Company · Paris</button>
+      <button type="button" data-v="Alamo Drafthouse Cinema Brooklyn" data-c="New York" data-g="fill Monday and Tuesday nights" data-i="horror">Alamo Drafthouse · Brooklyn</button>
+    </div>
   </form>
-  <div class="examples">Try: <a data-v="Blue Note" data-c="New York">Blue Note · New York</a> <a data-v="Ronnie Scott's" data-c="London">Ronnie Scott's · London</a> <a data-v="The Troubadour" data-c="Los Angeles">Troubadour · LA</a></div>
 </section>
-<main id="out" class="hidden">
-  <section class="row2">
-    <div class="panel"><h2>Agent trace</h2><ol id="steps" class="steps"></ol></div>
-    <div class="panel"><h2>Your crowd's taste DNA</h2><div id="venue" class="venue"></div><div id="tags" class="chips"></div></div>
+
+<section id="live" class="hidden" aria-live="polite">
+  <div class="card trace">
+    <div class="trace-head"><h2>Agent at work</h2><span id="timer" class="muted"></span></div>
+    <ol id="steps" class="steps"></ol>
+  </div>
+</section>
+
+<div id="out" class="hidden">
+  <section class="card strategy">
+    <div>
+      <p class="eyebrow" id="venueLine"></p>
+      <h2 id="headline" class="display"></h2>
+      <p id="strategyText" class="lede small"></p>
+      <p class="muted tiny" id="planBy"></p>
+    </div>
+    <div id="score" class="scoregrid"></div>
   </section>
-  <section class="panel"><h2>Programme scorecard</h2><div id="score" class="score"></div><div id="personas" class="personas"></div></section>
-  <section class="panel"><div class="ph"><h2>Your month, programmed</h2><button id="ics" class="ghost">Download calendar (.ics)</button></div><div id="cal" class="cal"></div></section>
-  <section class="panel"><h2>Why these? What your crowd over-indexes on</h2><div id="lanes" class="lanes"></div></section>
-  <section class="row2">
-    <div class="panel"><h2>Partner pitches, ready to send</h2><div id="outreach"></div></div>
-    <div class="panel"><h2>Taste twins worldwide</h2><p class="sub">Venues whose crowds love the same things as yours. Study their programme: it's a proven playbook.</p><ol id="twins" class="twins"></ol></div>
+
+  <section class="grid-2">
+    <div class="card">
+      <h3>Who your crowd is</h3>
+      <p id="persona" class="persona"></p>
+      <div id="dna" class="chips"></div>
+      <div id="ages" class="ages" aria-label="Age skew vs general population"></div>
+      <p class="tiny muted">Age skew vs. the general population (Qloo demographics). Right = over-represented.</p>
+    </div>
+    <div class="card">
+      <div class="h-row"><h3>Genre radar</h3><div id="laneTabs" class="tabs" role="tablist"></div></div>
+      <p class="tiny muted">Each bar = mean Qloo affinity of the top 5 entities in that genre for <b>this</b> crowd. Encore tested these live; the month uses the strongest.</p>
+      <div id="radar" class="radar"></div>
+    </div>
   </section>
-  <section class="row2">
-    <div class="panel" id="vsPanel"><h2>Generic AI guess vs Encore</h2><div id="vs"></div></div>
+
+  <section class="card">
+    <div class="h-row"><h3>Your month, programmed</h3>
+      <div class="actions"><button id="ics" class="ghost">Add to calendar (.ics)</button><button id="brief" class="ghost">Download brief (.md)</button><button id="share" class="ghost">Copy share link</button><button id="print" class="ghost">Print</button></div></div>
+    <div id="cal" class="cal"></div>
   </section>
+
+  <section class="grid-2">
+    <div class="card" id="gutCard">
+      <h3>Gut-check an idea</h3>
+      <p class="tiny muted">Type any genre or format. Encore finds it in Qloo and scores it against every genre it tested for this crowd.</p>
+      <form id="gf" class="gutform"><input name="idea" placeholder="e.g. K-pop, horror films, poetry" maxlength="60" aria-label="Idea"><button class="cta sm">Check</button></form>
+      <div id="gut"></div>
+    </div>
+    <div class="card" id="bridgeCard">
+      <h3>Grow without losing your regulars</h3>
+      <p class="tiny muted" id="bridgeNote"></p>
+      <div id="bridges" class="list"></div>
+    </div>
+  </section>
+
+  <section class="grid-2">
+    <div class="card">
+      <h3>Where to put the flyers</h3>
+      <p class="tiny muted">Neighbourhoods where this crowd's taste concentrates (Qloo heatmap). Dots = taste hotspots; ★ = your venue.</p>
+      <div id="map" class="map"></div>
+      <div id="zones" class="chips"></div>
+    </div>
+    <div class="card">
+      <h3>Partners next door</h3>
+      <p class="tiny muted">Places within 1.5 km whose audiences overlap with yours.</p>
+      <div id="partners" class="list"></div>
+      <h4 class="mt">Rooms competing for the same crowd</h4>
+      <div id="rivals" class="chips"></div>
+    </div>
+  </section>
+
+  <section class="grid-2">
+    <div class="card"><h3>Ready-to-send pitches</h3><div id="outreach"></div></div>
+    <div class="card">
+      <h3>Taste twins in other cities</h3>
+      <p class="tiny muted">Same kind of room, crowds that love the same things. Borrow their playbook, swap touring acts.</p>
+      <ol id="twins" class="list ol"></ol>
+      <h4 class="mt">Brands your crowd over-indexes on</h4>
+      <div id="brands" class="chips"></div>
+    </div>
+  </section>
+
+  <section class="card" id="vsCard">
+    <div class="h-row"><h3>Proof: a generic AI vs Encore</h3><button id="vsBtn" class="ghost">Run the proof</button></div>
+    <p class="tiny muted">The same LLM suggests nights with no taste data; Encore then gut-checks each suggestion against this crowd in Qloo.</p>
+    <div id="vs"></div>
+  </section>
+</div>
+
+<section id="mcp" class="card mcp">
+  <h3>Use Encore from any agent (MCP)</h3>
+  <p>Encore is also a public, stateless MCP server. Add it to Claude, Cursor or any MCP client and ask: <i>"Plan next month for Smalls Jazz Club and gut-check a salsa night."</i></p>
+  <pre><code id="mcpSnippet"></code></pre>
+  <p class="tiny muted">Tools: <code>encore_plan_month</code>, <code>encore_gut_check</code>, <code>encore_crowd_profile</code>. Local stdio: <code>node bin/encore-mcp.js</code>.</p>
+</section>
 </main>
-<footer>Powered by the <b>Qloo</b> Taste AI™ API · Open source (MIT)</footer>
-<script src="app.js"></script></body></html>
+
+<footer>
+  <p>Built for the Qloo Agentic Hackathon · Taste data from the <a href="https://www.qloo.com" target="_blank" rel="noopener">Qloo</a> Taste AI™ API (hackathon environment), cached privately in server memory only · Open source (MIT)</p>
+</footer>
+<script src="/app.js" defer></script>
+</body>
+</html>

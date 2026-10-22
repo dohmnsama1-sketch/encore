@@ -1,15 +1,77 @@
-#!/usr/bin/env node
-// MCP stdio server: lets any agent (Claude, Cursor, Grok...) call Encore as a tool.
-require('./env').loadEnv();
-const { Qloo } = require('./qloo'); const director = require('./director');
-const qloo = new Qloo({ apiKey: process.env.QLOO_API_KEY, baseUrl: process.env.QLOO_BASE_URL });
-const TOOLS = [{ name: 'encore_plan_month', description: 'Plan a month of events for a real venue using its crowd\'s cultural taste (Qloo taste graph): bookings, screenings, talks, brand collabs and neighbour partners.',
-  inputSchema: { type: 'object', properties: { venue: { type: 'string' }, city: { type: 'string' }, goal: { type: 'string' }, weeks: { type: 'number' } }, required: ['venue', 'city'] } }];
-const out = m => process.stdout.write(JSON.stringify(m) + '\n'); let buf = '';
-process.stdin.on('data', async c => { buf += c; let i; while ((i = buf.indexOf('\n')) >= 0) { const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1); if (!line) continue; let m; try { m = JSON.parse(line); } catch { continue; }
-  const reply = result => out({ jsonrpc: '2.0', id: m.id, result });
-  try { if (m.method === 'initialize') reply({ protocolVersion: '2024-11-05', capabilities: { tools: {} }, serverInfo: { name: 'encore', version: '1.0.0' } });
-    else if (m.method === 'tools/list') reply({ tools: TOOLS });
-    else if (m.method === 'tools/call') { const a = m.params.arguments || {}; const r = await director.run({ qloo, venueQuery: a.venue, city: a.city, goal: a.goal, weeks: a.weeks });
-      reply({ content: [{ type: 'text', text: JSON.stringify({ venue: r.venue.name, calendar: r.calendar, outreach: r.outreach }, null, 2) }] }); }
-    else if (m.id !== undefined) reply({}); } catch (e) { out({ jsonrpc: '2.0', id: m.id, error: { code: -32000, message: e.message } }); } } });
+'use strict';
+// MCP (Model Context Protocol) server core, shared by the stdio transport (bin/encore-mcp.js) and the public
+// stateless Streamable HTTP endpoint (/api/mcp). Lets any agent — Claude, Cursor, ChatGPT connectors, Grok — use Encore.
+const agent = require('./agent');
+const T = require('./tools');
+
+const VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
+const TOOLS = [
+  { name: 'encore_plan_month', title: 'Plan a month of events for a venue',
+    description: 'Reads a real venue\'s crowd taste from Qloo\'s taste graph and returns a month of events (live music, screenings, talks, book clubs...) anchored on entities the crowd over-indexes on, plus partners, flyer zones and a scorecard.',
+    inputSchema: { type: 'object', properties: { venue: { type: 'string', description: 'Venue name, e.g. "Smalls Jazz Club"' }, city: { type: 'string' }, goal: { type: 'string', description: 'e.g. "fill quiet Tuesdays, attract students"' }, idea: { type: 'string', description: 'Optional idea to gut-check, e.g. "salsa night"' }, weeks: { type: 'integer', minimum: 1, maximum: 6 } }, required: ['venue'] },
+    annotations: { readOnlyHint: true, openWorldHint: true } },
+  { name: 'encore_gut_check', title: 'Gut-check an event idea against a venue\'s crowd',
+    description: 'Scores an event idea (a genre or format) against what a venue\'s crowd actually loves, with a percentile, a verdict (go / tweak / rethink) and a better bet.',
+    inputSchema: { type: 'object', properties: { venue: { type: 'string' }, city: { type: 'string' }, idea: { type: 'string' } }, required: ['venue', 'idea'] },
+    annotations: { readOnlyHint: true, openWorldHint: true } },
+  { name: 'encore_crowd_profile', title: 'Profile a venue\'s crowd',
+    description: 'Taste DNA tags, demographic skew, and the music genres the crowd over-indexes on, for any venue Qloo knows.',
+    inputSchema: { type: 'object', properties: { venue: { type: 'string' }, city: { type: 'string' } }, required: ['venue'] },
+    annotations: { readOnlyHint: true, openWorldHint: true } },
+];
+
+function compactPlan(r) {
+  return { venue: { name: r.venue.name, address: r.venue.address }, strategy: r.strategy, scorecard: r.score,
+    calendar: r.calendar.map(e => ({ date: e.date, day: e.day, title: e.title, format: e.format, anchor: e.anchor, label: e.label, why: e.why, promo: e.promo })),
+    gutCheck: r.gut.map(g => ({ idea: g.idea, verdict: g.verdict, percentile: g.percentile, message: g.message })),
+    partners: r.partners.slice(0, 5).map(p => ({ name: p.name, distanceM: p.distanceM })), brands: r.brands.slice(0, 5).map(b => b.name),
+    tasteTwins: r.twins.map(t => `${t.name} (${t.city})`), flyerZones: r.zones.neighbourhoods.map(n => n.name), outreach: r.outreach,
+    source: 'Qloo Taste AI (hackathon API) via Encore' };
+}
+
+async function callTool(name, a, { qloo, env, oidc }) {
+  const venue = String(a.venue || '').slice(0, 100); const city = String(a.city || '').slice(0, 60);
+  if (name === 'encore_plan_month') return compactPlan(await agent.run({ qloo, venue, city, goal: String(a.goal || '').slice(0, 200), idea: String(a.idea || '').slice(0, 60), weeks: Math.min(6, Math.max(1, Number(a.weeks) || 4)), env, oidc }));
+  const ctx = { qloo };
+  const v = await T.findVenue(ctx, { venue, city });
+  await T.prepareCtx(ctx, { venueId: v.id, city: city || v.city });
+  if (name === 'encore_gut_check') return { venue: v.name, ...(await T.gutCheck(ctx, { idea: String(a.idea || '').slice(0, 60), venueId: v.id, city: city || v.city })) };
+  if (name === 'encore_crowd_profile') {
+    const [dna, demo, radar] = await Promise.all([T.crowdDNA(ctx, { venueId: v.id }), T.crowdDemographics(ctx, { venueId: v.id }), T.genreRadar(ctx, { lane: 'artist', venueId: v.id, city: city || v.city, genres: require('./lanes').LANES.artist.genres.slice(0, 10) })]);
+    return { venue: v.name, address: v.address, tasteDNA: dna.map(t => t.name), demographics: demo, musicGenres: radar.genres.map(g => ({ genre: g.label, score: g.score, top: g.entities.slice(0, 3).map(e => e.name) })) };
+  }
+  const e = new Error(`Unknown tool: ${name}`); e.code = -32602; throw e;
+}
+
+// Handle one JSON-RPC message (or batch). Returns the response object(s), or null for notifications.
+async function handle(msg, deps) {
+  if (Array.isArray(msg)) { const out = (await Promise.all(msg.map(m => handle(m, deps)))).filter(Boolean); return out.length ? out : null; }
+  if (!msg || msg.jsonrpc !== '2.0' || typeof msg.method !== 'string') return { jsonrpc: '2.0', id: msg && msg.id != null ? msg.id : null, error: { code: -32600, message: 'Invalid Request' } };
+  const isNote = msg.id === undefined || msg.id === null;
+  const ok = result => isNote ? null : { jsonrpc: '2.0', id: msg.id, result };
+  const fail = (code, message) => isNote ? null : { jsonrpc: '2.0', id: msg.id, error: { code, message } };
+  try {
+    switch (msg.method) {
+      case 'initialize': {
+        const want = msg.params && msg.params.protocolVersion;
+        return ok({ protocolVersion: VERSIONS.includes(want) ? want : VERSIONS[0], capabilities: { tools: { listChanged: false } },
+          serverInfo: { name: 'encore', title: 'Encore — taste-grounded venue programming', version: '2.0.0' },
+          instructions: 'Use encore_plan_month to programme a venue from its crowd\'s Qloo taste data; encore_gut_check to test an idea; encore_crowd_profile to understand a crowd.' });
+      }
+      case 'notifications/initialized': case 'notifications/cancelled': return null;
+      case 'ping': return ok({});
+      case 'tools/list': return ok({ tools: TOOLS });
+      case 'tools/call': {
+        const { name, arguments: args = {} } = msg.params || {};
+        if (!TOOLS.find(t => t.name === name)) return fail(-32602, `Unknown tool: ${name}`);
+        try { const data = await callTool(name, args, deps); return ok({ content: [{ type: 'text', text: JSON.stringify(data, null, 2) }], structuredContent: data, isError: false }); }
+        catch (e) { return ok({ content: [{ type: 'text', text: `Encore error: ${e.message}` }], isError: true }); }
+      }
+      case 'resources/list': return ok({ resources: [] });
+      case 'prompts/list': return ok({ prompts: [] });
+      default: return fail(-32601, `Method not found: ${msg.method}`);
+    }
+  } catch (e) { return fail(-32603, e.message); }
+}
+
+module.exports = { handle, TOOLS, VERSIONS, compactPlan };
