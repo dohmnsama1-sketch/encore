@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test test/",
+    "test": "node --test test/*.test.js",
     "mcp": "node bin/marquee-mcp.js",
     "check:secrets": "node scripts/check-secrets.js"
   },
