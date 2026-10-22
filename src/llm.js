@@ -45,4 +45,13 @@ async function chatJSON(system, user, env, oidc, opts = {}) {
   return m ? parseJSON(m.content) : null;
 }
 
-module.exports = { chat, chatJSON, parseJSON, enabled, config, status, breaker };
+// One cheap probe per instance (re-checked every 15 min) so /api/status reports what the planner will really use.
+let probed = 0, probing = null;
+async function probe(env = process.env, oidc) {
+  if (!config(env, oidc) || Date.now() < breaker.until || Date.now() - probed < 15 * 60e3) return status(env, oidc);
+  if (!probing) probing = chat({ messages: [{ role: 'user', content: 'ping' }], maxTokens: 1, timeoutMs: 8000 }, env, oidc)
+    .catch(() => {}).finally(() => { probed = Date.now(); probing = null; });
+  await probing; return status(env, oidc);
+}
+
+module.exports = { chat, chatJSON, parseJSON, enabled, config, status, probe, breaker };

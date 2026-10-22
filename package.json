@@ -1,6 +1,6 @@
 {
   "name": "marquee",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Marquee: the AI programming director for independent venues. Reads your crowd's cultural taste from Qloo's taste graph and programmes a month of nights they over-index on.",
   "main": "server.js",
   "bin": { "marquee-mcp": "bin/marquee-mcp.js" },

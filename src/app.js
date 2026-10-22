@@ -42,7 +42,7 @@ async function handle(req, res) {
   const env = process.env;
   try {
     if (p === '/api/status' || p === '/api/health') {
-      const q = qlooFor(); const c = llm.status(env, oidc);
+      const q = qlooFor(); const c = await llm.probe(env, oidc);
       return send(res, 200, { ok: true, version: pkg.version, qloo: live() ? 'live' : 'sample', llm: c && c.available ? { provider: c.provider, model: c.model } : null, ...(c && !c.available ? { llmNote: c.note } : {}),
         cache: q.cache ? q.cache.size : 0, quota: q.stats && q.stats.monthRemaining != null ? { monthRemaining: q.stats.monthRemaining, monthLimit: q.stats.monthLimit } : null });
     }

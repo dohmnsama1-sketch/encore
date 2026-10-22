@@ -16,6 +16,7 @@ fetch('/api/status').then(r => r.json()).then(s => {
   status = s; const m = $('#mode');
   m.textContent = s.qloo === 'live' ? `Qloo live · ${s.llm ? 'LLM agent' : 'rules planner'}` : 'SAMPLE DATA — not Qloo';
   m.className = 'pill ' + (s.qloo === 'live' ? 'live' : 'sample');
+  m.title = s.llm ? `Planner: ${s.llm.model}` : (s.llmNote || 'Deterministic rules planner (no LLM configured)');
   if (!s.llm) $('#vsCard').classList.add('hidden');
 }).catch(() => { $('#mode').textContent = 'offline'; });
 $('#mcpSnippet').textContent = JSON.stringify({ mcpServers: { marquee: { url: `${location.origin}/api/mcp` } } }, null, 2);
