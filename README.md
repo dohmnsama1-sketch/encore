@@ -39,7 +39,7 @@ so a booker can see *why*, not just *what*.
 | **Genre radar** | Every candidate genre scored against *this* crowd, across music, screenings, talks/podcasts and books |
 | **A month, programmed** | Dated nights across formats, labelled *Hidden gem* / *Crowd favourite*, each with promo copy and a poster |
 | **Why this works, on every night** | The exact Qloo signal used, the act's affinity rank in its genre, the genre's rank for this crowd, its reach tier and whether to book it or run a tribute |
-| **Draw & ROI forecast** | A 0–100 *draw index* per night built only from Qloo signals (50% crowd fit, 25% genre strength, 25% reach, bonuses for growth and bridge picks). Enter capacity, ticket, bar spend and cost to see expected guests, net uplift and return on spend, plus your own idea vs Marquee's month |
+| **Draw & ROI forecast** | A 0–100 *draw index* per night built only from Qloo signals (50% crowd fit, 25% genre strength, 25% reach, bonuses for growth and bridge picks). Enter capacity, quiet-night guests, ticket, bar spend, cost and a conversion rate (all editable, conservative defaults) to see expected guests, net uplift and return on spend, plus your own idea vs Marquee's month. Money figures are clearly labelled planning estimates |
 | **Compare two venues** | Any two rooms in any two cities: taste overlap score (score closeness + genre-rank agreement + shared taste tags), side-by-side genre bars, what each crowd leans to, and acts both crowds love |
 | **Provenance** | Every Qloo call behind the plan (endpoint, parameters, latency, cache hit), in the UI and in the export |
 | **Gut check** | Type any idea ("salsa night", "k-pop", "poetry"): percentile vs. everything tested, a go / tweak / rethink verdict, and a better bet |

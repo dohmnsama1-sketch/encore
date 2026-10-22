@@ -129,7 +129,7 @@ footer{max-width:1180px;margin:0 auto;padding:24px clamp(16px,4vw,40px) 48px;col
 .chip-draw{font:600 11.5px Inter;border-radius:999px;padding:3px 9px;background:#3ddc9718;border:1px solid #3ddc9755;color:#bff5dc}.chip-draw b{font-weight:800}.chip-draw.sm{font-size:11px;margin-left:6px}
 .whyx{border:1px solid var(--line);border-radius:10px;padding:6px 10px;background:#ffffff05}
 .whyx summary{cursor:pointer;font:600 12.5px Inter;color:var(--acc2)}.whyx ul{margin:8px 0 4px;padding-left:18px;font-size:12.5px;color:#ddd7f5}.whyx li{margin:3px 0}
-.fcform{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:10px 0 6px}.fcform input{padding:9px 11px}
+.fcform{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:10px 0 6px}.fcform input{padding:9px 11px;width:100%;min-width:0}.fcform label{font-size:12.5px;display:grid;gap:6px;align-content:end}
 .scoregrid.fc{grid-template-columns:repeat(6,1fr);margin:12px 0}.scoregrid b small{font-size:13px;color:var(--muted)}
 .fcbars{display:grid;gap:8px;margin-top:6px}
 .fcrow{display:grid;grid-template-columns:200px 1fr 130px;gap:12px;align-items:center}

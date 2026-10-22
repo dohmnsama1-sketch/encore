@@ -177,9 +177,9 @@ $('#vsBtn').addEventListener('click', async () => {
 const money = x => (x < 0 ? '−' : '') + '$' + Math.abs(Math.round(x)).toLocaleString();
 function forecast() {
   if (!last) return; const f = $('#fcf'); const n = k => Math.max(0, Number(f[k].value) || 0);
-  const cap = Math.max(1, n('cap')), base = Math.min(n('base'), cap), ticket = n('ticket'), spend = n('spend'), cost = n('cost');
-  const guests = d => Math.round(base + (cap - base) * (d / 100) * 0.8);
-  const rows = last.calendar.map(e => { const d = e.draw ? e.draw.index : 50; const g = guests(d); return { e, d, g, lo: Math.round(g * 0.85), hi: Math.min(cap, Math.round(g * 1.15)), net: g * (ticket + spend) - cost - base * spend }; });
+  const cap = Math.max(1, n('cap')), base = Math.min(n('base'), cap), ticket = n('ticket'), spend = n('spend'), cost = n('cost'), conv = Math.min(100, n('conv')) / 100;
+  const guests = d => Math.round(base + (cap - base) * (d / 100) * conv);
+  const rows = last.calendar.map(e => { const d = e.draw ? e.draw.index : 50; const g = guests(d); return { e, d, g, lo: Math.round(g * 0.85), hi: Math.min(cap, Math.round(g * 1.15)), net: (g - base) * (ticket + spend) - cost }; });
   const extra = rows.reduce((s, r) => s + (r.g - base), 0); const net = rows.reduce((s, r) => s + r.net, 0); const spent = cost * rows.length;
   const avg = rows.length ? Math.round(rows.reduce((s, r) => s + r.g, 0) / rows.length) : 0;
   $('#fcTotals').innerHTML = [['Avg guests / night', `${avg}<small>/${cap}</small>`, true], ['Extra guests this month', '+' + extra], ['Net uplift vs a quiet night', money(net), net > 0], ['Return on spend', spent ? Math.round((net / spent) * 100) + '%' : '–', net > 0], ['Avg draw index', last.score.avgDraw ?? '–'], ['Nights', rows.length]]
@@ -209,6 +209,7 @@ $('#cf').addEventListener('submit', async e => {
   } catch (err) { $('#cmp').innerHTML = `<p class="err">${esc(err.message)}</p>`; }
   finally { btn.disabled = false; btn.textContent = 'Compare crowds'; }
 });
+const poss = n => /['’]s$/i.test(n) ? n : /s$/i.test(n) ? `${n}'` : `${n}'s`;
 function renderCompare(c) {
   const A = c.a.venue.name, B = c.b.venue.name; const all = c.genres.flatMap(g => [g.a, g.b]); const lo = Math.min(...all) - 0.01, hi = Math.max(...all);
   const w = x => Math.max(4, ((x - lo) / (hi - lo || 1)) * 100);
@@ -217,8 +218,8 @@ function renderCompare(c) {
     <p class="tiny muted">Genre-rank agreement ${c.rank} · average score gap ${c.meanGap} pts · ${c.stats.qlooCalls ? `${c.stats.qlooCalls} Qloo calls in ${(c.stats.ms / 1000).toFixed(1)}s` : 'served from the private Qloo cache'}</p></div></div>
     <div class="cmpgrid"><div class="legend"><span class="la">■ ${esc(A)}</span><span class="lb">■ ${esc(B)}</span></div>
     ${c.genres.map(g => `<div class="cmprow"><span class="name">${esc(g.label)}</span><div class="pair"><i class="a" style="width:${w(g.a)}%"></i><i class="b" style="width:${w(g.b)}%"></i></div><span class="nums">${pct(g.a)} · ${pct(g.b)}</span></div>`).join('')}</div>
-    <div class="grid-2 tight"><div><h4>${esc(A)}'s crowd leans to</h4><div class="chips">${c.moreA.map(r => `<span>${esc(r.label)}</span>`).join('') || '<span>no strong lean</span>'}</div></div>
-    <div><h4>${esc(B)}'s crowd leans to</h4><div class="chips">${c.moreB.map(r => `<span>${esc(r.label)}</span>`).join('') || '<span>no strong lean</span>'}</div></div></div>
+    <div class="grid-2 tight"><div><h4>${esc(poss(A))} crowd leans to</h4><div class="chips">${c.moreA.map(r => `<span>${esc(r.label)}</span>`).join('') || '<span>no strong lean</span>'}</div></div>
+    <div><h4>${esc(poss(B))} crowd leans to</h4><div class="chips">${c.moreB.map(r => `<span>${esc(r.label)}</span>`).join('') || '<span>no strong lean</span>'}</div></div></div>
     ${c.sharedFavourites.length ? `<h4 class="mt">Loved by both crowds: book them for both rooms</h4><div class="chips">${c.sharedFavourites.map(e => `<span>${esc(e.name)}</span>`).join('')}</div>` : ''}`;
 }
 
@@ -240,9 +241,9 @@ function zip(files) { // store-only ZIP
 const csvCell = v => /[",\n]/.test(String(v ?? '')) ? `"${String(v).replace(/"/g, '""')}"` : String(v ?? '');
 $('#pack').onclick = () => {
   if (!last) return; const j = last; const base = slug(j.venue.name);
-  const f = $('#fcf'); const cap = +f.cap.value || 80, b0 = +f.base.value || 0;
+  const f = $('#fcf'); const cap = +f.cap.value || 80, b0 = +f.base.value || 0, cv = (+f.conv.value || 60) / 100;
   const nights = [['date', 'day', 'title', 'format', 'genre', 'anchor', 'label', 'qloo_affinity', 'qloo_popularity', 'draw_index', 'expected_guests', 'why', 'promo'].join(','),
-    ...j.calendar.map(e => [e.date, e.day, e.title, e.format, e.genre, e.anchor, e.label, e.affinity, e.popularity, e.draw && e.draw.index, Math.round(b0 + (cap - b0) * ((e.draw ? e.draw.index : 50) / 100) * 0.8), e.why, e.promo].map(csvCell).join(','))].join('\n');
+    ...j.calendar.map(e => [e.date, e.day, e.title, e.format, e.genre, e.anchor, e.label, e.affinity, e.popularity, e.draw && e.draw.index, Math.round(b0 + (cap - b0) * ((e.draw ? e.draw.index : 50) / 100) * cv), e.why, e.promo].map(csvCell).join(','))].join('\n');
   const files = [
     { name: `${base}/README.txt`, data: `Marquee booking pack for ${j.venue.name}\nGenerated ${new Date().toISOString().slice(0, 10)} from Qloo taste data (${j.stats.qlooCalls} calls).\n\nmonth-plan.md      the full brief: strategy, calendar with evidence, crowd, radar, gut checks, flyer zones, partners\nnights.csv         one row per night with Qloo scores, draw index and expected guests (your assumptions)\ncalendar.ics       import into Google Calendar, Outlook or Apple Calendar\noutreach/          ready-to-send pitches\nposters/           one SVG poster per night\nprovenance.csv     every Qloo call behind this plan\n` },
     { name: `${base}/month-plan.md`, data: briefMD(j) }, { name: `${base}/nights.csv`, data: nights }, { name: `${base}/calendar.ics`, data: icsText(j) },

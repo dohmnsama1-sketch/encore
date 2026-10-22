@@ -114,13 +114,14 @@
 
   <section class="card" id="forecast" aria-labelledby="fcTitle">
     <div class="h-row"><h3 id="fcTitle">Draw &amp; ROI forecast</h3><span class="pill">planning estimate</span></div>
-    <p class="tiny muted">Each night's <b>draw index</b> (0–100) comes only from Qloo signals: 50% crowd fit (affinity), 25% genre strength, 25% reach (popularity), +5 for audience growth, +5 for a bridge pick. Enter your room's numbers to turn it into guests and money. Expected guests = baseline + (capacity − baseline) × draw × 0.8.</p>
+    <p class="tiny muted">Each night's <b>draw index</b> (0–100) comes only from Qloo signals: 50% crowd fit (affinity), 25% genre strength, 25% reach (popularity), +5 for audience growth, +5 for a bridge pick. Enter your room's numbers to turn it into guests and money. Expected guests = quiet-night guests + (capacity − quiet-night guests) × draw × conversion. Net = extra guests × (ticket + bar spend) − cost of the night.</p>
     <form id="fcf" class="fcform">
       <label>Capacity<input type="number" name="cap" min="10" max="5000" value="80"></label>
-      <label>Guests on a quiet night now<input type="number" name="base" min="0" max="5000" value="20"></label>
-      <label>Ticket (per guest)<input type="number" name="ticket" min="0" max="500" value="15"></label>
+      <label>Quiet-night guests<input type="number" name="base" min="0" max="5000" value="20"></label>
+      <label>Ticket (per guest)<input type="number" name="ticket" min="0" max="500" value="12"></label>
       <label>Bar spend (per guest)<input type="number" name="spend" min="0" max="500" value="18"></label>
-      <label>Cost per night (act, staff)<input type="number" name="cost" min="0" max="100000" value="250"></label>
+      <label>Cost per night<input type="number" name="cost" min="0" max="100000" value="400" title="Act, staff and promotion for one night"></label>
+      <label>Conversion %<input type="number" name="conv" min="10" max="100" value="60" title="Share of the draw index that turns into extra seats filled"></label>
     </form>
     <div id="fcTotals" class="scoregrid fc"></div>
     <div id="fcBars" class="fcbars"></div>
