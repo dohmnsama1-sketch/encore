@@ -1,6 +1,6 @@
 'use strict';
-// Encore's Qloo-grounded tools. The agent (LLM tool-calling or the rules planner) composes these; MCP exposes them.
-// Every number Encore shows comes from a field Qloo returned: affinity, popularity, audience_growth, demographics.
+// Marquee's Qloo-grounded tools. The agent (LLM tool-calling or the rules planner) composes these; MCP exposes them.
+// Every number Marquee shows comes from a field Qloo returned: affinity, popularity, audience_growth, demographics.
 const { LANES, tagLabel, MUSIC } = require('./lanes');
 const { resolveVenue } = require('./qloo');
 
@@ -54,7 +54,7 @@ async function genreRadar(ctx, { lane, venueId, city, genres, take = 6 }) {
 }
 
 // Entities for one lane. Signal = the venue entity. Qloo doesn't accept every place as a cross-domain signal for every
-// entity type (some return 400, or results without affinity, which means the signal was ignored). Encore then falls back
+// entity type (some return 400, or results without affinity, which means the signal was ignored). Marquee then falls back
 // to the crowd's signature artists (ctx.proxies) and finally to the crowd's taste tags, and labels the result `via`.
 async function laneEntities(ctx, { lane, venueId, city, tag, take = 10, ages, exclude }) {
   const L = LANES[lane];
@@ -177,7 +177,7 @@ async function gutCheck(ctx, { idea, venueId, city, radar = {} }) {
   const best = dist.filter(g => g.tag !== tag.id)[0];
   const verdict = pct == null ? 'unknown' : pct >= 66 ? 'go' : pct >= 33 ? 'tweak' : 'rethink';
   const tn = tagLabel(tag.id);
-  const message = verdict === 'go' ? `Go. Your crowd over-indexes on ${tn}: it beats ${pct}% of the ${LANES[lane].label.toLowerCase()} genres Encore tested for them.`
+  const message = verdict === 'go' ? `Go. Your crowd over-indexes on ${tn}: it beats ${pct}% of the ${LANES[lane].label.toLowerCase()} genres Marquee tested for them.`
     : verdict === 'tweak' ? `Workable. ${tn} sits mid-pack for this crowd (${pct}th percentile). Pair it with ${best ? best.label : 'a stronger genre'} to lift it.`
     : `Rethink. ${tn} is near the bottom for this crowd (${pct}th percentile). ${best ? `${best.label} is a much stronger fit.` : ''}`;
   return { idea, tag: tag.id, tagName: tagLabel(tag.id), lane, score: r3(score), percentile: pct, verdict, message, bookThese: ents.slice(0, 3), betterBet: best ? { label: best.label, score: best.score, entities: best.entities.slice(0, 3) } : null, tested: scores.length };

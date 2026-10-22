@@ -1,5 +1,5 @@
 'use strict';
-// Encore agent: perceive → plan → act (parallel Qloo tool calls) → compose → critique → write.
+// Marquee agent: perceive → plan → act (parallel Qloo tool calls) → compose → critique → write.
 // Planning is done by an LLM with tool calling when one is configured, and by a transparent rules planner otherwise.
 // Either way, a coverage check guarantees the brief has every section, and the critic verifies that every night is
 // anchored on an entity Qloo returned for this crowd.
@@ -7,6 +7,27 @@ const T = require('./tools');
 const C = require('./compose');
 const { LANES, roomProfile, lanesForGoal, audienceForGoal, nightsForGoal, tagLabel, MUSIC } = require('./lanes');
 const llm = require('./llm');
+const I = require('./insight');
+
+// Per-run provenance: wrap the shared Qloo client so this run records every call it made (path, parameters, timing, cache).
+function withProvenance(qloo) {
+  const log = []; const q = Object.create(qloo);
+  if (typeof qloo.get !== 'function') { // sample-data mode: log the high-level calls so the provenance table still works
+    const PATHS = { search: '/search', insights: '/v2/insights', tagInsights: '/v2/insights (tags)', demographics: '/v2/insights (demographics)', heatmap: '/v2/insights (heatmap)', findTags: '/v2/tags' };
+    for (const [m, path] of Object.entries(PATHS)) if (typeof qloo[m] === 'function') q[m] = async (...a) => {
+      const t = Date.now(); let ok = true;
+      try { return await qloo[m](...a); } catch (e) { ok = false; throw e; }
+      finally { log.push({ path, params: { sample: 'true' }, ms: Date.now() - t, cached: false, ok }); }
+    };
+    return { q, log };
+  }
+  q.get = async (path, params = {}, opts) => {
+    const t = Date.now(); const cached = qloo.cache && qloo.cache.map ? qloo.cache.map.has(qloo.url(path, params)) : false; let ok = true;
+    try { return await qloo.get(path, params, opts); } catch (e) { ok = false; throw e; }
+    finally { log.push({ path, params: Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v).length > 70 ? String(v).slice(0, 67) + '…' : String(v)])), ms: Date.now() - t, cached, ok }); }
+  };
+  return { q, log };
+}
 
 function tracer(onEvent) {
   let n = 0; const steps = [];
@@ -14,7 +35,11 @@ function tracer(onEvent) {
     const id = ++n; const t0 = Date.now(); const s = { id, tool, label, status: 'running' }; steps.push(s);
     onEvent && onEvent({ type: 'step', ...s });
     try { const out = await fn(); Object.assign(s, { status: 'done', ms: Date.now() - t0, summary: summarize(out) }); onEvent && onEvent({ type: 'step', ...s }); return out; }
-    catch (e) { Object.assign(s, { status: 'error', ms: Date.now() - t0, summary: e.message }); onEvent && onEvent({ type: 'step', ...s }); throw e; }
+    catch (e) {
+      // An unavailable LLM is a planned fallback, not a failure: show it as skipped.
+      const skipped = !!e.llmUnavailable;
+      Object.assign(s, { status: skipped ? 'skipped' : 'error', ms: Date.now() - t0, summary: skipped ? 'LLM unavailable: the rules planner takes over' : e.message });
+      onEvent && onEvent({ type: 'step', ...s }); throw e; }
   }
   const soft = (tool, label, fn, sum, fallback = null) => step(tool, label, fn, sum).catch(() => fallback);
   return { step, soft, steps };
@@ -23,9 +48,9 @@ function tracer(onEvent) {
 const names = (list, n = 3) => (list || []).slice(0, n).map(e => e.name).join(', ');
 
 async function run({ qloo, venue: venueQuery, city = '', goal = '', idea = '', nights, weeks = 4, env = process.env, oidc, onEvent, from }) {
-  if (!venueQuery || !String(venueQuery).trim()) { const e = new Error('Tell Encore your venue name.'); e.status = 400; throw e; }
-  const tr = tracer(onEvent); const ctx = { qloo }; const t0 = Date.now();
-  const callsBefore = qloo.calls;
+  if (!venueQuery || !String(venueQuery).trim()) { const e = new Error('Tell Marquee your venue name.'); e.status = 400; throw e; }
+  const tr = tracer(onEvent); const t0 = Date.now();
+  const callsBefore = qloo.calls; const prov = withProvenance(qloo); const ctx = { qloo: prov.q };
 
   // PERCEIVE ---------------------------------------------------------------------------
   const venue = await tr.step('qloo.search', `Finding "${venueQuery}"${city ? ' in ' + city : ''}`, () => T.findVenue(ctx, { venue: venueQuery, city }),
@@ -91,12 +116,13 @@ async function run({ qloo, venue: venueQuery, city = '', goal = '', idea = '', n
     C.buildCalendar({ venue, lanes: lanesWithData, radar, bridges, nights: plannedNights, weeks, from }), ev => `${ev.length} nights across ${new Set(ev.map(e => e.lane)).size} formats`);
   const score = await tr.step('critic', 'Critic: checking grounding, repeats and variety', async () => C.critique({ events, lanes: lanesWithData, radarIds: new Set(gathered.keys()), nights: plannedNights.length }),
     s => s.ok ? `Passed: ${s.groundedPct}% grounded in Qloo, ${s.repeats} repeats, ${s.formats} formats` : `Issues: ${s.issues.join('; ')}`);
+  I.explain(events, radar, { venue, proxies: ctx.proxies, city: where, audience });
   const outreach = C.pitches({ venue, partners, brands, twins });
 
   // WRITE (LLM copywriter, optional) --------------------------------------------------
   let strategy = null; let by = plan.by;
   if (llmOn) {
-    const copy = await tr.soft('llm.copywriter', 'Writing promo copy (only from Qloo-grounded facts)', () => llmCopy({ venue, goal, events, dna, demographics, radar, env, oidc }), x => x && x.headline ? x.headline : 'done', null);
+    const copy = !llm.enabled(env, oidc) ? null : await tr.soft('llm.copywriter', 'Writing promo copy (only from Qloo-grounded facts)', () => llmCopy({ venue, goal, events, dna, demographics, radar, env, oidc }), x => x && x.headline ? x.headline : 'done', null);
     if (copy) {
       strategy = copy.strategy || null;
       for (const ev of events) { const c = copy.promos && copy.promos[ev.anchorId]; if (typeof c === 'string' && c.length > 20 && c.length < 400 && c.toLowerCase().includes(String(ev.anchor).toLowerCase().split(/[\s:]/)[0])) ev.promo = c; }
@@ -110,7 +136,7 @@ async function run({ qloo, venue: venueQuery, city = '', goal = '', idea = '', n
     version: 2, venue, city: where, goal, idea, nights: plannedNights, weeks, room, plan: { lanes: plan.lanes, by, rationale: plan.rationale, audience },
     dna, demographics, signature: proxies || [], persona: C.personas({ dna, demographics }),
     radar: Object.fromEntries(Object.entries(radar).map(([k, v]) => [k, v.map(g => ({ tag: g.tag, label: g.label, score: g.score, via: g.via, entities: g.entities.slice(0, 6) }))])),
-    calendar: events, score, gut, bridges: bridges.map(b => ({ lane: b.lane, ...b.entity })), partners, rivals, brands, twins, zones, outreach, strategy,
+    calendar: events, score: { ...score, avgDraw: events.length ? Math.round(events.reduce((s, e) => s + e.draw.index, 0) / events.length) : null }, gut: gut.map(g => ({ ...g, draw: I.ideaDraw(g) })), drawModel: I.WEIGHTS, provenance: prov.log, bridges: bridges.map(b => ({ lane: b.lane, ...b.entity })), partners, rivals, brands, twins, zones, outreach, strategy,
     steps, stats: { qlooCalls: qloo.calls - callsBefore, ms: Date.now() - t0, llm: llmOn, planner: by },
   };
 }
@@ -130,9 +156,9 @@ function rulesStrategy({ venue, radar, plan, demographics, audience, zones, gut 
   return { headline: top ? `${top.label} is your crowd's language. Speak it on quiet nights.` : `A month built on what your crowd already loves.`, text: lines.join(' ') };
 }
 
-// LLM planner: a real tool-calling loop over Encore's Qloo tools (max 3 rounds, parallel calls).
+// LLM planner: a real tool-calling loop over Marquee's Qloo tools (max 3 rounds, parallel calls).
 async function llmPlan({ venue, where, goal, idea, room, dna, demographics, audience, toolImpl, env, oidc, onEvent }) {
-  const sys = `You are Encore, an AI programming director for independent venues. You plan a month of events by calling tools that query Qloo's taste graph for THIS venue's crowd. Rules: (1) Call genre_radar for 2-4 lanes that fit the room and the owner's goal; for the music lane, pass 8-10 Qloo genre tag IDs (format urn:tag:genre:music:<genre>, e.g. jazz, soul, neo_soul, r_and_b, blues, funk, latin, salsa, hip_hop, electronic, house, disco, classical, rock, indie, punk, folk_rock, singer_songwriter, pop, reggae, afrobeats, k_pop, ambient, gospel, country, metal, dance, reggaeton). (2) If the owner gave an idea, call gut_check. (3) If the goal implies a new audience (e.g. students, younger, older), call bridge_picks with the matching age buckets. (4) Call neighbour_partners, brand_collabs, taste_twins and flyer_zones. Never invent data; use only tool results. When done, reply with JSON only: {"lanes":[lane ids in priority order],"rationale":"one or two sentences on why"}.`;
+  const sys = `You are Marquee, an AI programming director for independent venues. You plan a month of events by calling tools that query Qloo's taste graph for THIS venue's crowd. Rules: (1) Call genre_radar for 2-4 lanes that fit the room and the owner's goal; for the music lane, pass 8-10 Qloo genre tag IDs (format urn:tag:genre:music:<genre>, e.g. jazz, soul, neo_soul, r_and_b, blues, funk, latin, salsa, hip_hop, electronic, house, disco, classical, rock, indie, punk, folk_rock, singer_songwriter, pop, reggae, afrobeats, k_pop, ambient, gospel, country, metal, dance, reggaeton). (2) If the owner gave an idea, call gut_check. (3) If the goal implies a new audience (e.g. students, younger, older), call bridge_picks with the matching age buckets. (4) Call neighbour_partners, brand_collabs, taste_twins and flyer_zones. Never invent data; use only tool results. When done, reply with JSON only: {"lanes":[lane ids in priority order],"rationale":"one or two sentences on why"}.`;
   const user = `Venue: ${venue.name} (${venue.address || where}). Room type from Qloo: ${room.categories.join(', ') || 'unknown'}. City: ${where}. Owner goal: ${goal || 'fill quiet nights'}. Owner idea to check: ${idea || 'none'}. Crowd taste DNA (Qloo tags): ${dna.slice(0, 12).map(t => t.name).join(', ') || 'n/a'}. Demographics: ${demographics ? `peak age ${demographics.peak.label}` : 'n/a'}. Suggested growth audience: ${audience ? audience.label + ' ' + audience.ages.join(',') : 'none'}. Lanes available: ${Object.keys(LANES).join(', ')}.`;
   const messages = [{ role: 'system', content: sys }, { role: 'user', content: user }];
   for (let round = 0; round < 3; round++) {
@@ -161,8 +187,8 @@ async function llmCopy({ venue, goal, events, dna, demographics, radar, env, oid
   return llm.chatJSON(sys, user, env, oidc, { maxTokens: 1600 });
 }
 
-// LLM-only baseline for the "Generic AI vs Encore" proof: the same model, no tools. Each generic idea is then gut-checked against Qloo.
-async function genericVsEncore({ ctx: given, qloo, venue, city, goal, env, oidc }) {
+// LLM-only baseline for the "Generic AI vs Marquee" proof: the same model, no tools. Each generic idea is then gut-checked against Qloo.
+async function genericVsMarquee({ ctx: given, qloo, venue, city, goal, env, oidc }) {
   if (!llm.enabled(env, oidc)) return { available: false };
   const j = await llm.chatJSON('You are a helpful assistant. Reply JSON only: {"ideas":["six short event ideas, 2-5 words each, each naming a genre or format"]}',
     `Suggest six event nights for ${venue.name} in ${city || venue.city}. Goal: ${goal || 'fill quiet nights'}.`, env, oidc, { maxTokens: 300, temperature: 0.7 });
@@ -172,4 +198,24 @@ async function genericVsEncore({ ctx: given, qloo, venue, city, goal, env, oidc 
   return { available: true, ideas: checks.map(c => ({ idea: c.idea, verdict: c.verdict, percentile: c.percentile, tagName: c.tagName, betterBet: c.betterBet && c.betterBet.label })) };
 }
 
-module.exports = { run, genericVsEncore, rulesStrategy };
+// Multi-venue / multi-city comparison: the same 12 music genres scored against two crowds.
+const COMPARE_GENRES = ['jazz', 'soul', 'r_and_b', 'hip_hop', 'electronic', 'house', 'rock', 'indie', 'pop', 'latin', 'classical', 'country'].map(g => MUSIC + g);
+async function snapshot(qloo, { venue: name, city = '' }) {
+  if (!name || !String(name).trim()) { const e = new Error('Name both venues.'); e.status = 400; throw e; }
+  const ctx = { qloo }; const venue = await T.findVenue(ctx, { venue: name, city }); const where = city || venue.city || '';
+  await T.prepareCtx(ctx, { venueId: venue.id, city: where });
+  const [dna, demographics, radar] = await Promise.all([
+    T.crowdDNA(ctx, { venueId: venue.id }).catch(() => []), T.crowdDemographics(ctx, { venueId: venue.id }).catch(() => null),
+    T.genreRadar(ctx, { lane: 'artist', venueId: venue.id, city: where, genres: COMPARE_GENRES }).then(r => r.genres).catch(() => [])]);
+  return { venue: { id: venue.id, name: venue.name, address: venue.address, city: where }, dna, demographics, radar };
+}
+async function compareVenues({ qloo, a, b }) {
+  const t0 = Date.now(); const before = qloo.calls;
+  const [A, B] = await Promise.all([snapshot(qloo, a), snapshot(qloo, b)]);
+  if (!A.radar.length || !B.radar.length) { const e = new Error('Qloo has too little taste data for one of these venues to compare.'); e.status = 422; throw e; }
+  const cmp = I.compareCrowds(A, B);
+  const slimR = r => r.map(g => ({ tag: g.tag, label: g.label, score: g.score, top: g.entities.slice(0, 3).map(e => e.name) }));
+  return { a: { ...A, radar: slimR(A.radar), dna: A.dna.slice(0, 10) }, b: { ...B, radar: slimR(B.radar), dna: B.dna.slice(0, 10) }, ...cmp, stats: { qlooCalls: qloo.calls - before, ms: Date.now() - t0 } };
+}
+
+module.exports = { run, genericVsMarquee, rulesStrategy, compareVenues };

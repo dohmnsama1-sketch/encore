@@ -16,6 +16,21 @@ test('agent runs end-to-end and passes its own critic (sample data)', async () =
   assert.ok(r.partners.length && r.twins.length && r.zones.neighbourhoods.length);
   assert.ok(events.some(e => e.tool === 'critic' && e.status === 'done'));
   assert.ok(r.steps.every(s => s.status !== 'running'));
+  // explainability + draw forecast + provenance on every night
+  for (const e of r.calendar) {
+    assert.ok(e.reasons.length >= 2, 'every night explains itself'); assert.ok(e.evidence && e.evidence.signal);
+    assert.ok(e.draw.index >= 0 && e.draw.index <= 100);
+  }
+  assert.ok(r.score.avgDraw > 0 && r.drawModel.fit === 0.5);
+  assert.ok(r.provenance.length === r.stats.qlooCalls && r.provenance.every(p => p.path.startsWith('/') && !JSON.stringify(p).toLowerCase().includes('api-key')));
+  assert.ok(r.gut[0].draw && r.gut[0].draw.index >= 0);
+});
+
+test('MCP compare_venues tool returns an overlap and genre table', async () => {
+  const deps = { qloo: new StubQloo(), env: {} };
+  const c = await mcp.handle({ jsonrpc: '2.0', id: 9, method: 'tools/call', params: { name: 'marquee_compare_venues', arguments: { venueA: 'Sample Room', venueB: 'Other Room' } } }, deps);
+  assert.equal(c.result.isError, false); const s = c.result.structuredContent;
+  assert.ok(s.overlap >= 0 && s.overlap <= 100); assert.ok(Array.isArray(s.genres) && s.genres.length);
 });
 
 test('gut check returns a percentile and a better bet', async () => {
@@ -33,13 +48,13 @@ test('planArgs sanitises user input', () => {
 test('MCP: initialize, list, call, notifications, errors', async () => {
   const deps = { qloo: new StubQloo(), env: {} };
   const init = await mcp.handle({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18' } }, deps);
-  assert.equal(init.result.protocolVersion, '2025-06-18'); assert.equal(init.result.serverInfo.name, 'encore');
+  assert.equal(init.result.protocolVersion, '2025-06-18'); assert.equal(init.result.serverInfo.name, 'marquee');
   assert.equal(await mcp.handle({ jsonrpc: '2.0', method: 'notifications/initialized' }, deps), null);
   const list = await mcp.handle({ jsonrpc: '2.0', id: 2, method: 'tools/list' }, deps);
-  assert.deepEqual(list.result.tools.map(t => t.name), ['encore_plan_month', 'encore_gut_check', 'encore_crowd_profile']);
-  const call = await mcp.handle({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'encore_gut_check', arguments: { venue: 'Sample Room', idea: 'jazz' } } }, deps);
+  assert.deepEqual(list.result.tools.map(t => t.name), ['marquee_plan_month', 'marquee_gut_check', 'marquee_crowd_profile', 'marquee_compare_venues']);
+  const call = await mcp.handle({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'marquee_gut_check', arguments: { venue: 'Sample Room', idea: 'jazz' } } }, deps);
   assert.equal(call.result.isError, false); assert.ok(call.result.structuredContent.verdict);
-  const plan = await mcp.handle({ jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'encore_plan_month', arguments: { venue: 'Sample Room', weeks: 2 } } }, deps);
+  const plan = await mcp.handle({ jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'marquee_plan_month', arguments: { venue: 'Sample Room', weeks: 2 } } }, deps);
   assert.equal(plan.result.structuredContent.calendar.length, 4);
   const bad = await mcp.handle({ jsonrpc: '2.0', id: 5, method: 'nope' }, deps); assert.equal(bad.error.code, -32601);
   const inv = await mcp.handle({ id: 6 }, deps); assert.equal(inv.error.code, -32600);
@@ -58,7 +73,10 @@ test('HTTP API: status, plan (JSON + SSE), gutcheck, mcp, validation, 404', asyn
     assert.equal((await post('/api/plan', { venue: '' })).status, 400);
     const g = await (await post('/api/gutcheck', { venue: 'Sample Room', idea: 'jazz' })).json(); assert.ok(g.verdict);
     assert.equal((await post('/api/gutcheck', { venue: 'Sample Room' })).status, 400);
-    const m = await (await post('/api/mcp', { jsonrpc: '2.0', id: 1, method: 'tools/list' })).json(); assert.equal(m.result.tools.length, 3);
+    const m = await (await post('/api/mcp', { jsonrpc: '2.0', id: 1, method: 'tools/list' })).json(); assert.equal(m.result.tools.length, 4);
+    const c = await (await post('/api/compare', { a: { venue: 'Sample Room', city: 'Sample City' }, b: { venue: 'Other Room', city: 'Elsewhere' } })).json();
+    assert.ok(c.overlap >= 0 && c.overlap <= 100 && c.genres.length >= 5 && c.verdict);
+    assert.equal((await post('/api/compare', { a: { venue: 'X' } })).status, 400);
     assert.equal((await post('/api/mcp', { jsonrpc: '2.0', method: 'notifications/initialized' })).status, 202);
     assert.equal((await fetch(base + '/api/mcp')).status, 405);
     assert.equal((await fetch(base + '/api/nope')).status, 404);

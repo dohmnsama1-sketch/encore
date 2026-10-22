@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-// MCP stdio transport: `npx encore-mcp` or `node bin/encore-mcp.js`, with QLOO_API_KEY in the environment.
+// MCP stdio transport: `npx marquee-mcp` or `node bin/marquee-mcp.js`, with QLOO_API_KEY in the environment.
 require('../src/env').loadEnv();
 const { handle } = require('../src/mcp'); const { makeQloo } = require('../src/app');
 const deps = { qloo: makeQloo(), env: process.env };

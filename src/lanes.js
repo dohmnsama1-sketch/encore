@@ -1,5 +1,5 @@
 'use strict';
-// Programme "lanes" (event formats) and the Qloo genre tags Encore can test for each.
+// Programme "lanes" (event formats) and the Qloo genre tags Marquee can test for each.
 // Every tag ID below was verified against the hackathon API to return entities for its filter.type.
 
 const G = (prefix, ids) => ids.map(id => `${prefix}${id}`);

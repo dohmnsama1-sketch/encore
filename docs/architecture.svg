@@ -4,14 +4,14 @@
     <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#9aa0b4"/></marker>
   </defs>
   <rect width="1200" height="640" rx="24" fill="#0d0c14"/>
-  <text x="40" y="58" fill="#fff" font-size="28" font-weight="700">Encore — architecture</text>
-  <text x="40" y="86" fill="#9aa0b4" font-size="15">One agent loop, eight Qloo-backed tools, a critic, and three front doors (web UI, REST + SSE, MCP).</text>
+  <text x="40" y="58" fill="#fff" font-size="28" font-weight="700">Marquee — architecture</text>
+  <text x="40" y="86" fill="#9aa0b4" font-size="15">One agent loop, nine Qloo-backed tools, a critic that explains every pick, and three front doors (web UI, REST + SSE, MCP).</text>
 
   <!-- front doors -->
   <g font-size="15">
     <rect x="40" y="130" width="220" height="70" rx="14" fill="#1a1826" stroke="#2c2a3c"/><text x="60" y="160" fill="#fff" font-weight="600">Web app</text><text x="60" y="182" fill="#9aa0b4" font-size="13">live agent trace (SSE)</text>
     <rect x="40" y="220" width="220" height="70" rx="14" fill="#1a1826" stroke="#2c2a3c"/><text x="60" y="250" fill="#fff" font-weight="600">MCP clients</text><text x="60" y="272" fill="#9aa0b4" font-size="13">Claude · Cursor · any agent</text>
-    <rect x="40" y="310" width="220" height="70" rx="14" fill="#1a1826" stroke="#2c2a3c"/><text x="60" y="340" fill="#fff" font-weight="600">REST API</text><text x="60" y="362" fill="#9aa0b4" font-size="13">/api/plan · /api/gutcheck</text>
+    <rect x="40" y="310" width="220" height="70" rx="14" fill="#1a1826" stroke="#2c2a3c"/><text x="60" y="340" fill="#fff" font-weight="600">REST API</text><text x="60" y="362" fill="#9aa0b4" font-size="13">plan · gutcheck · compare</text>
   </g>
   <path d="M260 165 L320 240" stroke="#9aa0b4" stroke-width="2" marker-end="url(#a)" fill="none"/>
   <path d="M260 255 L320 255" stroke="#9aa0b4" stroke-width="2" marker-end="url(#a)" fill="none"/>
@@ -25,7 +25,7 @@
     <rect x="452" y="172" width="98" height="56" rx="10" fill="#241f33"/><text x="466" y="198" fill="#fff" font-weight="600">Plan</text><text x="466" y="216" fill="#9aa0b4" font-size="11">LLM or rules</text>
     <rect x="560" y="172" width="98" height="56" rx="10" fill="#241f33"/><text x="574" y="198" fill="#fff" font-weight="600">Act</text><text x="574" y="216" fill="#9aa0b4" font-size="11">tool calls</text>
     <rect x="668" y="172" width="98" height="56" rx="10" fill="#241f33"/><text x="682" y="198" fill="#fff" font-weight="600">Compose</text><text x="682" y="216" fill="#9aa0b4" font-size="11">calendar · copy</text>
-    <rect x="776" y="172" width="86" height="56" rx="10" fill="#3a1f2c"/><text x="790" y="198" fill="#fff" font-weight="600">Critic</text><text x="790" y="216" fill="#ff9db8" font-size="11">grounded?</text>
+    <rect x="776" y="172" width="86" height="56" rx="10" fill="#3a1f2c"/><text x="790" y="198" fill="#fff" font-weight="600">Critic</text><text x="790" y="216" fill="#ff9db8" font-size="11">proof · why</text>
   </g>
   <g stroke="#9aa0b4" stroke-width="1.6" marker-end="url(#a)"><path d="M442 200h10"/><path d="M550 200h10"/><path d="M658 200h10"/><path d="M766 200h10"/></g>
   <text x="344" y="262" fill="#9aa0b4" font-size="13" font-weight="700" letter-spacing="1.2">AGENT TOOLS (LLM function-calling + rules planner)</text>
@@ -37,7 +37,7 @@
     <rect x="344" y="358" width="250" height="34" rx="8" fill="#1d1a29"/><text x="358" y="380">taste_twins — other cities</text>
     <rect x="610" y="358" width="250" height="34" rx="8" fill="#1d1a29"/><text x="624" y="380">flyer_zones — heatmap</text>
     <rect x="344" y="400" width="250" height="34" rx="8" fill="#1d1a29"/><text x="358" y="422">brand_collabs — sponsors</text>
-    <rect x="610" y="400" width="250" height="34" rx="8" fill="#1d1a29"/><text x="624" y="422">crowd_dna + demographics</text>
+    <rect x="610" y="400" width="250" height="34" rx="8" fill="#1d1a29"/><text x="624" y="422">compare_venues · crowd_dna</text>
   </g>
   <rect x="344" y="456" width="516" height="104" rx="12" fill="#1a1826" stroke="#2c2a3c"/>
   <text x="362" y="484" fill="#fff" font-size="14" font-weight="600">Qloo client</text>
@@ -54,5 +54,5 @@
   <rect x="940" y="160" width="220" height="110" rx="16" fill="#1a1826" stroke="#2c2a3c"/>
   <text x="960" y="192" fill="#fff" font-size="16" font-weight="700">LLM (optional)</text>
   <g fill="#9aa0b4" font-size="13"><text x="960" y="216">tool-calling planner</text><text x="960" y="236">+ copywriter, validated</text><text x="960" y="256">fallback: rules planner</text></g>
-  <text x="40" y="610" fill="#6f7488" font-size="12">Every recommended night is anchored on a Qloo entity the critic can trace back to a radar call. Qloo data is never written to disk or committed.</text>
+  <text x="40" y="610" fill="#6f7488" font-size="12">Every night is anchored on a Qloo entity, carries its evidence and a draw index, and every Qloo call is logged for provenance. Qloo data is never written to disk or committed.</text>
 </svg>

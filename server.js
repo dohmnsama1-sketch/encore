@@ -14,5 +14,5 @@ const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': MIME[path.extname(f)] || 'application/octet-stream', 'X-Content-Type-Options': 'nosniff' });
   fs.createReadStream(f).pipe(res);
 });
-if (require.main === module) server.listen(PORT, () => console.log(`Encore on http://localhost:${PORT} (Qloo: ${process.env.QLOO_API_KEY ? 'live' : 'SAMPLE DATA'}; LLM: ${llm.enabled() ? llm.config().provider : 'off, rules planner'})`));
+if (require.main === module) server.listen(PORT, () => console.log(`Marquee on http://localhost:${PORT} (Qloo: ${process.env.QLOO_API_KEY ? 'live' : 'SAMPLE DATA'}; LLM: ${llm.enabled() ? llm.config().provider : 'off, rules planner'})`));
 module.exports = { server };

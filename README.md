@@ -1,21 +1,21 @@
 <div align="center">
 
-<img src="public/logo.svg" width="56" alt="Encore logo" />
+<img src="public/logo.svg" width="56" alt="Marquee logo" />
 
-# Encore
+# Marquee
 
 **The AI programming director for independent venues.**
-Your crowd already told the world what they love. Encore turns it into a sold-out month.
+Your crowd already told the world what they love. Marquee turns it into a sold-out month.
 
-[![Tests](https://img.shields.io/badge/tests-26%20passing-2dd4bf.svg)](test/)
+[![Tests](https://img.shields.io/badge/tests-30%20passing-2dd4bf.svg)](test/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-ff5c8a.svg)](LICENSE)
 ![Node ≥18](https://img.shields.io/badge/node-%E2%89%A518-ffb347.svg)
 ![Zero dependencies](https://img.shields.io/badge/dependencies-0-7c6cff.svg)
 ![MCP server](https://img.shields.io/badge/MCP-server-2dd4bf.svg)
 
-**[Live demo](https://encore-venues.vercel.app)** · [How it works](#how-it-works) · [Use it from your agent (MCP)](#use-encore-from-any-agent-mcp) · [Quickstart](#quickstart)
+**[Live demo](https://marquee-venues.vercel.app)** · [How it works](#how-it-works) · [Use it from your agent (MCP)](#use-marquee-from-any-agent-mcp) · [Quickstart](#quickstart)
 
-<img src="docs/hero.png" alt="Encore home screen" width="900" />
+<img src="docs/hero.png" alt="Marquee home screen" width="900" />
 
 </div>
 
@@ -27,7 +27,7 @@ Ask a generic AI how to fill a quiet Tuesday and you get *"trivia night"*: the s
 But a jazz club in the West Village and a jazz club in Soho don't share a crowd, and the bookers who run small rooms
 (jazz clubs, bookshops, indie cinemas, bars with a stage) don't have a data team to tell them the difference.
 
-**Encore reads the cultural taste of the people who already love *your* room** (through [Qloo's](https://www.qloo.com) cross-domain taste graph), tests
+**Marquee reads the cultural taste of the people who already love *your* room** (through [Qloo's](https://www.qloo.com) cross-domain taste graph), tests
 dozens of genres and formats against them, and programmes a month of nights they over-index on. Every pick carries its Qloo score,
 so a booker can see *why*, not just *what*.
 
@@ -37,20 +37,24 @@ so a booker can see *why*, not just *what*.
 |---|---|
 | **Crowd profile** | Taste-DNA tags, age and gender skew, and the crowd's signature artists |
 | **Genre radar** | Every candidate genre scored against *this* crowd, across music, screenings, talks/podcasts and books |
-| **A month, programmed** | Dated nights across formats, labelled *Hidden gem* / *Crowd favourite*, each with a "why", promo copy and a poster |
+| **A month, programmed** | Dated nights across formats, labelled *Hidden gem* / *Crowd favourite*, each with promo copy and a poster |
+| **Why this works, on every night** | The exact Qloo signal used, the act's affinity rank in its genre, the genre's rank for this crowd, its reach tier and whether to book it or run a tribute |
+| **Draw & ROI forecast** | A 0–100 *draw index* per night built only from Qloo signals (50% crowd fit, 25% genre strength, 25% reach, bonuses for growth and bridge picks). Enter capacity, ticket, bar spend and cost to see expected guests, net uplift and return on spend, plus your own idea vs Marquee's month |
+| **Compare two venues** | Any two rooms in any two cities: taste overlap score (score closeness + genre-rank agreement + shared taste tags), side-by-side genre bars, what each crowd leans to, and acts both crowds love |
+| **Provenance** | Every Qloo call behind the plan (endpoint, parameters, latency, cache hit), in the UI and in the export |
 | **Gut check** | Type any idea ("salsa night", "k-pop", "poetry"): percentile vs. everything tested, a go / tweak / rethink verdict, and a better bet |
 | **Grow without losing regulars** | Bridge picks loved by current regulars *and* the age group you want to attract |
 | **Where to put the flyers** | Qloo heatmap of the neighbourhoods where this taste concentrates |
 | **Partners & rivals** | Places within 1.5 km whose audiences overlap yours, split into cross-promo partners and rooms competing for the same crowd |
 | **Taste twins** | Similar rooms in other cities, for swapping notes and routing tours |
 | **Ready-to-send pitches** | Drafted outreach to a neighbour, a brand and a taste twin |
-| **Exports** | `.ics` calendar, Markdown brief, share link, print view |
+| **One-click booking pack** | A `.zip` built in the browser: Markdown brief with the evidence, `nights.csv` (scores, draw, expected guests), `.ics` calendar, one SVG poster per night, outreach drafts and `provenance.csv`. Also: share link and print view |
 
 ## How it works
 
-<img src="docs/architecture.png" alt="Encore architecture" width="900" />
+<img src="docs/architecture.png" alt="Marquee architecture" width="900" />
 
-Encore is an agent with an explicit loop, streamed live to the UI so you can watch it think:
+Marquee is an agent with an explicit loop, streamed live to the UI so you can watch it think:
 
 1. **Perceive**: resolve the venue on Qloo (`/search`, re-ranked by name and city), then read its crowd: taste tags (`urn:tag`, diversified by subtype), demographics (`urn:demographics`) and signature artists.
 2. **Plan**: choose programme lanes from the room type and the goal. With an LLM configured, a function-calling planner picks tools; otherwise a deterministic rules planner does.
@@ -62,10 +66,12 @@ Encore is an agent with an explicit loop, streamed live to the UI so you can wat
    - `flyer_zones`: `urn:heatmap` (locality boundaries and geohash cells);
    - `brand_collabs`, `gut_check` (`/v2/tags` lookup, then percentile vs. the radar).
 4. **Compose**: interleave the strongest genres into dated nights, alternate hidden gems with crowd favourites, and slot a bridge pick every third night.
-5. **Critique**: a critic checks every night is anchored on an entity returned by Qloo for this crowd, with no repeats and enough format variety. The UI shows the result (e.g. *100% grounded in Qloo*).
+5. **Critique & explain**: a critic checks every night is anchored on an entity returned by Qloo for this crowd, with no repeats and enough format variety. The UI shows the result (e.g. *100% grounded in Qloo*). Then every night gets its evidence, reasons and draw index, and every Qloo call is logged for the provenance table.
 
 **Never ungrounded.** Some places aren't valid signals for some entity types in Qloo's index; the API then ignores the signal and returns results without an affinity.
-Encore detects this and falls back from the venue to its crowd's signature artists, then to its taste tags. Anything without a Qloo affinity is dropped and never programmed.
+Marquee detects this and falls back from the venue to its crowd's signature artists, then to its taste tags. Anything without a Qloo affinity is dropped and never programmed.
+
+**No LLM? Still works.** If the configured LLM is unavailable (no key, or the provider refuses), a circuit breaker switches to the rules planner and the trace shows the step as *skipped* instead of failing.
 
 ### Built to be reliable on a shared hackathon key
 
@@ -76,31 +82,32 @@ Encore detects this and falls back from the venue to its crowd's signature artis
 - **Abuse protection**: per-IP rate limits and input sanitisation.
 - **Zero runtime dependencies**: plain Node ≥18, fast cold starts on Vercel.
 
-## Use Encore from any agent (MCP)
+## Use Marquee from any agent (MCP)
 
-Encore is also a public, stateless [Model Context Protocol](https://modelcontextprotocol.io) server (Streamable HTTP, JSON-RPC over `POST`):
+Marquee is also a public, stateless [Model Context Protocol](https://modelcontextprotocol.io) server (Streamable HTTP, JSON-RPC over `POST`):
 
 ```json
-{ "mcpServers": { "encore": { "url": "https://encore-venues.vercel.app/api/mcp" } } }
+{ "mcpServers": { "marquee": { "url": "https://marquee-venues.vercel.app/api/mcp" } } }
 ```
 
 | Tool | What it does |
 |---|---|
-| `encore_plan_month` | A month of taste-grounded events for any venue, plus partners, flyer zones and a scorecard |
-| `encore_gut_check` | Scores an idea against a venue's crowd: percentile, verdict and better bet |
-| `encore_crowd_profile` | Taste DNA, demographics and the music genres a crowd over-indexes on |
+| `marquee_plan_month` | A month of taste-grounded events for any venue, plus partners, flyer zones and a scorecard |
+| `marquee_gut_check` | Scores an idea against a venue's crowd: percentile, verdict and better bet |
+| `marquee_crowd_profile` | Taste DNA, demographics and the music genres a crowd over-indexes on |
+| `marquee_compare_venues` | Taste overlap between two venues (any cities), genre by genre, plus acts both crowds love |
 
-Prefer local stdio? `QLOO_API_KEY=... node bin/encore-mcp.js`
+Prefer local stdio? `QLOO_API_KEY=... node bin/marquee-mcp.js`
 
 Then ask your agent: *"Plan next month for Smalls Jazz Club in New York and gut-check a salsa night."*
 
 ## Quickstart
 
 ```bash
-git clone https://github.com/dohmnsama1-sketch/encore && cd encore
+git clone https://github.com/dohmnsama1-sketch/marquee && cd marquee
 cp .env.example .env          # add your QLOO_API_KEY (and optionally an LLM)
 npm start                     # http://localhost:8787
-npm test                      # 26 tests, no network, no key needed
+npm test                      # 30 tests, no network, no key needed
 ```
 
 No key? `npm start` still runs on clearly labelled fictional **sample data**, so you can explore the UI.
@@ -121,6 +128,7 @@ No key? `npm start` still runs on clearly labelled fictional **sample data**, so
 |---|---|
 | `POST /api/plan` | `{ venue, city, goal, idea, nights: ["Tue","Thu"], weeks }` returns the full plan; add `?stream=1` for Server-Sent Events of each agent step |
 | `POST /api/gutcheck` | `{ venue, city, idea }` |
+| `POST /api/compare` | `{ a: { venue, city }, b: { venue, city } }` returns overlap, verdict, per-genre scores, shared favourites |
 | `POST /api/mcp` | MCP JSON-RPC |
 | `GET /api/status` | mode, LLM, cache size, remaining monthly quota |
 
@@ -132,6 +140,7 @@ server.js           local server (static + API)
 src/agent.js        perceive → plan → act → compose → critique loop, LLM planner + rules fallback
 src/tools.js        Qloo-backed tools (radar, gut check, bridges, partners, twins, heatmap, brands)
 src/qloo.js         Qloo client: rate limiter, cache, retries, de-dup, normalisation
+src/insight.js      draw index, "why this works" evidence, crowd comparison
 src/compose.js      calendar builder, labels, copy, critic, outreach drafts
 src/lanes.js        programme lanes, verified Qloo genre tags, room rules, goal parsing
 src/mcp.js          MCP server core (HTTP + stdio)

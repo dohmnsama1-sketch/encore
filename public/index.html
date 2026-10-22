@@ -3,11 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Encore — your crowd's taste, programmed into a sold-out month</title>
-<meta name="description" content="Encore is an AI programming director for independent venues. It reads your crowd's cultural taste from Qloo's taste graph and plans a month of nights they'll actually show up for.">
-<meta property="og:title" content="Encore — agents, but with taste, for independent venues">
-<meta property="og:description" content="Type your venue. Encore reads what your crowd loves (Qloo) and programmes a month of nights, with the reasons, partners and flyer zones.">
-<meta property="og:image" content="/og.png">
+<title>Marquee — your crowd's taste, programmed into a sold-out month</title>
+<meta name="description" content="Marquee is an AI programming director for independent venues. It reads your crowd's cultural taste from Qloo's taste graph and plans a month of nights they'll actually show up for.">
+<meta property="og:title" content="Marquee — agents, but with taste, for independent venues">
+<meta property="og:description" content="Type your venue. Marquee reads what your crowd loves (Qloo) and programmes a month of nights, with the reasons, partners and flyer zones.">
+<meta property="og:image" content="https://marquee-venues.vercel.app/og.png">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0b0a12">
 <link rel="icon" href="/logo.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,19 +18,31 @@
 <body>
 <a class="skip" href="#main">Skip to content</a>
 <header class="nav">
-  <a class="brand" href="/" aria-label="Encore home"><img src="/logo.svg" alt="" width="28" height="28"><span>Encore</span></a>
+  <a class="brand" href="/" aria-label="Marquee home"><img src="/logo.svg" alt="" width="28" height="28"><span>Marquee</span></a>
   <nav>
     <span id="mode" class="pill" title="Data source">connecting…</span>
     <a href="#mcp" class="navlink">Use from your agent</a>
-    <a href="https://github.com/dohmnsama1-sketch/encore" class="navlink" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://github.com/dohmnsama1-sketch/marquee" class="navlink" target="_blank" rel="noopener">GitHub</a>
   </nav>
 </header>
 
 <main id="main">
 <section class="hero">
-  <p class="eyebrow">AI programming director for independent venues · powered by Qloo's taste graph</p>
-  <h1>Your crowd already told the world what they love.<br><em>Encore turns it into a sold-out month.</em></h1>
-  <p class="lede">Ask a generic AI how to fill a quiet Tuesday and you get "trivia night" — the same answer for every venue on earth. Encore reads the cultural taste of the people who already love <b>your</b> room, tests genres against them, and programmes nights they over-index on. Every pick shows its Qloo score.</p>
+  <div class="hero-grid">
+    <div>
+      <p class="eyebrow">AI programming director for independent venues · powered by Qloo's taste graph</p>
+      <h1>Your crowd already told the world what they love.<br><em>Marquee turns it into a sold-out month.</em></h1>
+      <p class="lede">Ask a generic AI how to fill a quiet Tuesday and you get "trivia night", the same answer for every venue on earth. Marquee reads the cultural taste of the people who already love <b>your</b> room, tests genres against them, and programmes nights they over-index on, each with its Qloo evidence and a draw forecast.</p>
+    </div>
+    <div class="sign" aria-hidden="true">
+      <div class="bulbs"></div>
+      <div class="sign-in">
+        <span class="s-k">Tue · Live music · Hidden gem</span>
+        <span class="s-t">The act your regulars already love</span>
+        <div class="s-row"><span><b>97</b>crowd fit</span><span><b>88</b>draw index</span><span><b>100%</b>grounded</span></div>
+      </div>
+    </div>
+  </div>
 
   <form id="f" class="card form" autocomplete="off">
     <div class="grid2">
@@ -54,6 +67,9 @@
       <button type="button" data-v="Alamo Drafthouse Cinema Brooklyn" data-c="New York" data-g="fill Monday and Tuesday nights" data-i="horror">Alamo Drafthouse · Brooklyn</button>
     </div>
   </form>
+  <ul class="proof" aria-label="What Marquee does">
+    <li><b>9</b> Qloo-backed tools</li><li><b>6</b> taste domains</li><li><b>Every</b> night explained</li><li><b>Draw &amp; ROI</b> forecast</li><li><b>Compare</b> any two venues</li><li><b>MCP</b> server</li>
+  </ul>
 </section>
 
 <section id="live" class="hidden" aria-live="polite">
@@ -84,21 +100,36 @@
     </div>
     <div class="card">
       <div class="h-row"><h3>Genre radar</h3><div id="laneTabs" class="tabs" role="tablist"></div></div>
-      <p class="tiny muted">Each bar = mean Qloo affinity of the top 5 entities in that genre for <b>this</b> crowd. Encore tested these live; the month uses the strongest.</p>
+      <p class="tiny muted">Each bar = mean Qloo affinity of the top 5 entities in that genre for <b>this</b> crowd. Marquee tested these live; the month uses the strongest.</p>
       <div id="radar" class="radar"></div>
     </div>
   </section>
 
   <section class="card">
     <div class="h-row"><h3>Your month, programmed</h3>
-      <div class="actions"><button id="ics" class="ghost">Add to calendar (.ics)</button><button id="brief" class="ghost">Download brief (.md)</button><button id="share" class="ghost">Copy share link</button><button id="print" class="ghost">Print</button></div></div>
+      <div class="actions"><button id="pack" class="cta sm">Download booking pack (.zip)</button><button id="ics" class="ghost">Add to calendar (.ics)</button><button id="brief" class="ghost">Brief (.md)</button><button id="share" class="ghost">Copy share link</button><button id="print" class="ghost">Print</button></div></div>
+    <p class="tiny muted">Open <b>Why this works</b> on any night to see the Qloo signal, its rank and the evidence behind it.</p>
     <div id="cal" class="cal"></div>
   </section>
 
+  <section class="card" id="forecast" aria-labelledby="fcTitle">
+    <div class="h-row"><h3 id="fcTitle">Draw &amp; ROI forecast</h3><span class="pill">planning estimate</span></div>
+    <p class="tiny muted">Each night's <b>draw index</b> (0–100) comes only from Qloo signals: 50% crowd fit (affinity), 25% genre strength, 25% reach (popularity), +5 for audience growth, +5 for a bridge pick. Enter your room's numbers to turn it into guests and money. Expected guests = baseline + (capacity − baseline) × draw × 0.8.</p>
+    <form id="fcf" class="fcform">
+      <label>Capacity<input type="number" name="cap" min="10" max="5000" value="80"></label>
+      <label>Guests on a quiet night now<input type="number" name="base" min="0" max="5000" value="20"></label>
+      <label>Ticket (per guest)<input type="number" name="ticket" min="0" max="500" value="15"></label>
+      <label>Bar spend (per guest)<input type="number" name="spend" min="0" max="500" value="18"></label>
+      <label>Cost per night (act, staff)<input type="number" name="cost" min="0" max="100000" value="250"></label>
+    </form>
+    <div id="fcTotals" class="scoregrid fc"></div>
+    <div id="fcBars" class="fcbars"></div>
+    <p id="fcIdea" class="tiny"></p>
+  </section>
   <section class="grid-2">
     <div class="card" id="gutCard">
       <h3>Gut-check an idea</h3>
-      <p class="tiny muted">Type any genre or format. Encore finds it in Qloo and scores it against every genre it tested for this crowd.</p>
+      <p class="tiny muted">Type any genre or format. Marquee finds it in Qloo and scores it against every genre it tested for this crowd.</p>
       <form id="gf" class="gutform"><input name="idea" placeholder="e.g. K-pop, horror films, poetry" maxlength="60" aria-label="Idea"><button class="cta sm">Check</button></form>
       <div id="gut"></div>
     </div>
@@ -136,18 +167,41 @@
     </div>
   </section>
 
+  <section class="card">
+    <details id="provWrap"><summary><h3 class="inline-h">Provenance: every Qloo call this run made <span id="provN" class="muted"></span></h3></summary>
+      <p class="tiny muted">Endpoint, parameters (never the key), latency and whether it came from Marquee's private cache.</p>
+      <div class="tablewrap"><table id="prov"><thead><tr><th>#</th><th>Endpoint</th><th>Parameters</th><th>ms</th><th>Cache</th></tr></thead><tbody></tbody></table></div>
+    </details>
+  </section>
+
   <section class="card" id="vsCard">
-    <div class="h-row"><h3>Proof: a generic AI vs Encore</h3><button id="vsBtn" class="ghost">Run the proof</button></div>
-    <p class="tiny muted">The same LLM suggests nights with no taste data; Encore then gut-checks each suggestion against this crowd in Qloo.</p>
+    <div class="h-row"><h3>Proof: a generic AI vs Marquee</h3><button id="vsBtn" class="ghost">Run the proof</button></div>
+    <p class="tiny muted">The same LLM suggests nights with no taste data; Marquee then gut-checks each suggestion against this crowd in Qloo.</p>
     <div id="vs"></div>
   </section>
 </div>
 
+<section id="compare" class="card" aria-labelledby="cmpTitle">
+  <div class="h-row"><h3 id="cmpTitle">Compare two venues, in any two cities</h3><span class="pill">multi-venue</span></div>
+  <p class="tiny muted">Run a second room, plan a tour, or scout a new city: Marquee scores the same 12 music genres against both crowds from Qloo and tells you where they agree and where they differ.</p>
+  <form id="cf" class="cmpform">
+    <fieldset><legend>Venue A</legend><input name="va" placeholder="Venue" aria-label="Venue A" maxlength="100" required><input name="ca" placeholder="City" aria-label="City A" maxlength="60"></fieldset>
+    <fieldset><legend>Venue B</legend><input name="vb" placeholder="Venue" aria-label="Venue B" maxlength="100" required><input name="cb" placeholder="City" aria-label="City B" maxlength="60"></fieldset>
+    <button class="cta sm" id="cgo">Compare crowds</button>
+  </form>
+  <div class="presets">Try:
+    <button type="button" data-cmp="Smalls Jazz Club|New York|Ronnie Scott's|London">Smalls vs Ronnie Scott's</button>
+    <button type="button" data-cmp="Smalls Jazz Club|New York|Village Vanguard|New York">Smalls vs Village Vanguard</button>
+    <button type="button" data-cmp="Shakespeare and Company|Paris|Strand Book Store|New York">Shakespeare &amp; Co vs Strand</button>
+  </div>
+  <div id="cmp" aria-live="polite"></div>
+</section>
+
 <section id="mcp" class="card mcp">
-  <h3>Use Encore from any agent (MCP)</h3>
-  <p>Encore is also a public, stateless MCP server. Add it to Claude, Cursor or any MCP client and ask: <i>"Plan next month for Smalls Jazz Club and gut-check a salsa night."</i></p>
+  <h3>Use Marquee from any agent (MCP)</h3>
+  <p>Marquee is also a public, stateless MCP server. Add it to Claude, Cursor or any MCP client and ask: <i>"Plan next month for Smalls Jazz Club and gut-check a salsa night."</i></p>
   <pre><code id="mcpSnippet"></code></pre>
-  <p class="tiny muted">Tools: <code>encore_plan_month</code>, <code>encore_gut_check</code>, <code>encore_crowd_profile</code>. Local stdio: <code>node bin/encore-mcp.js</code>.</p>
+  <p class="tiny muted">Tools: <code>marquee_plan_month</code>, <code>marquee_gut_check</code>, <code>marquee_crowd_profile</code>, <code>marquee_compare_venues</code>. Local stdio: <code>node bin/marquee-mcp.js</code>.</p>
 </section>
 </main>
 

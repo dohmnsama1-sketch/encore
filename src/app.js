@@ -42,14 +42,14 @@ async function handle(req, res) {
   const env = process.env;
   try {
     if (p === '/api/status' || p === '/api/health') {
-      const q = qlooFor(); const c = llm.config(env, oidc);
-      return send(res, 200, { ok: true, version: pkg.version, qloo: live() ? 'live' : 'sample', llm: c ? { provider: c.provider, model: c.model } : null,
+      const q = qlooFor(); const c = llm.status(env, oidc);
+      return send(res, 200, { ok: true, version: pkg.version, qloo: live() ? 'live' : 'sample', llm: c && c.available ? { provider: c.provider, model: c.model } : null, ...(c && !c.available ? { llmNote: c.note } : {}),
         cache: q.cache ? q.cache.size : 0, quota: q.stats && q.stats.monthRemaining != null ? { monthRemaining: q.stats.monthRemaining, monthLimit: q.stats.monthLimit } : null });
     }
     if (p === '/api/plan' && req.method === 'POST') {
       if (limited(ipOf(req), 8)) return send(res, 429, { error: 'Slow down: up to 8 plans per minute.' });
       const a = planArgs(await readBody(req));
-      if (!a.venue) return send(res, 400, { error: 'Tell Encore your venue name.' });
+      if (!a.venue) return send(res, 400, { error: 'Tell Marquee your venue name.' });
       const q = qlooFor();
       const stream = u.searchParams.get('stream') === '1' || /text\/event-stream/.test(req.headers.accept || '');
       if (!stream) { const out = await agent.run({ qloo: q, ...a, env, oidc }); return send(res, 200, { ...out, mode: live() ? 'live' : 'sample' }); }
@@ -73,7 +73,12 @@ async function handle(req, res) {
       const b = await readBody(req); const ctx = { qloo: qlooFor() };
       const venue = b.venueId ? { id: str(b.venueId, 64), name: str(b.venue, 100), city: str(b.city, 60) } : await T.findVenue(ctx, { venue: str(b.venue, 100), city: str(b.city, 60) });
       await T.prepareCtx(ctx, { venueId: venue.id, city: str(b.city, 60) || venue.city });
-      return send(res, 200, await agent.genericVsEncore({ ctx, qloo: ctx.qloo, venue, city: str(b.city, 60), goal: str(b.goal, 200), env, oidc }));
+      return send(res, 200, await agent.genericVsMarquee({ ctx, qloo: ctx.qloo, venue, city: str(b.city, 60), goal: str(b.goal, 200), env, oidc }));
+    }
+    if (p === '/api/compare' && req.method === 'POST') {
+      if (limited(ipOf(req) + ':c', 6)) return send(res, 429, { error: 'Slow down: up to 6 comparisons per minute.' });
+      const b = await readBody(req); const side = x => ({ venue: str(x && x.venue, 100), city: str(x && x.city, 60) });
+      return send(res, 200, { ...(await agent.compareVenues({ qloo: qlooFor(), a: side(b.a), b: side(b.b) })), mode: live() ? 'live' : 'sample' });
     }
     if (p === '/api/mcp') {
       const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, Accept, Mcp-Session-Id, Mcp-Protocol-Version', 'Access-Control-Allow-Methods': 'POST, GET, OPTIONS' };

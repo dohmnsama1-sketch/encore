@@ -2,7 +2,7 @@
 // Optional LLM layer (OpenAI-compatible chat completions with tool calling).
 // Providers, in order: AI_BASE_URL + AI_API_KEY (any OpenAI-compatible endpoint: OpenAI, Groq, OpenRouter, Gemini, Ollama),
 // AI_GATEWAY_API_KEY (Vercel AI Gateway), or the Vercel OIDC token that Vercel injects at runtime (AI Gateway, no secret to manage).
-// Encore never depends on the LLM: every caller has a deterministic fallback.
+// Marquee never depends on the LLM: every caller has a deterministic fallback.
 
 const GATEWAY = 'https://ai-gateway.vercel.sh/v1';
 
@@ -13,7 +13,11 @@ function config(env = process.env, oidc) {
   if (tok && env.AI_DISABLE !== '1') return { base: GATEWAY, key: tok, model: env.AI_MODEL || 'openai/gpt-4.1-mini', provider: 'vercel-ai-gateway (oidc)' };
   return null;
 }
-const enabled = (env = process.env, oidc) => !!config(env, oidc);
+// Circuit breaker: an auth/billing failure (401/402/403) means the provider is misconfigured, not busy.
+// Stop calling it for 15 minutes so every request falls straight through to the rules planner.
+const breaker = { until: 0, reason: '' };
+const enabled = (env = process.env, oidc) => !!config(env, oidc) && Date.now() >= breaker.until;
+function status(env = process.env, oidc) { const c = config(env, oidc); if (!c) return null; return { provider: c.provider, model: c.model, available: Date.now() >= breaker.until, ...(breaker.reason && Date.now() < breaker.until ? { note: breaker.reason } : {}) }; }
 
 async function chat({ messages, tools, json = false, temperature = 0.3, maxTokens = 1800, timeoutMs = 30000 }, env = process.env, oidc) {
   const c = config(env, oidc); if (!c) return null;
@@ -24,7 +28,9 @@ async function chat({ messages, tools, json = false, temperature = 0.3, maxToken
     if (json) body.response_format = { type: 'json_object' };
     const r = await fetch(`${c.base}/chat/completions`, { method: 'POST', signal: ctrl.signal,
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${c.key}` }, body: JSON.stringify(body) });
-    if (!r.ok) { const txt = await r.text().catch(() => ''); const e = new Error(`LLM ${r.status}: ${txt.slice(0, 160)}`); e.status = r.status; throw e; }
+    if (!r.ok) { const txt = await r.text().catch(() => ''); const e = new Error(`LLM ${r.status}: ${txt.slice(0, 160)}`); e.status = r.status;
+      if ([401, 402, 403].includes(r.status)) { breaker.until = Date.now() + 15 * 60e3; breaker.reason = `LLM provider refused (${r.status}); using the rules planner`; e.llmUnavailable = true; }
+      throw e; }
     const j = await r.json(); return j.choices && j.choices[0] && j.choices[0].message;
   } finally { clearTimeout(t); }
 }
@@ -39,4 +45,4 @@ async function chatJSON(system, user, env, oidc, opts = {}) {
   return m ? parseJSON(m.content) : null;
 }
 
-module.exports = { chat, chatJSON, parseJSON, enabled, config };
+module.exports = { chat, chatJSON, parseJSON, enabled, config, status, breaker };

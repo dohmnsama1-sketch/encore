@@ -20,7 +20,7 @@ function labelPool(pool) {
   });
 }
 
-// Bookability: a small room can actually book a niche act; for global stars Encore proposes a tribute / listening night.
+// Bookability: a small room can actually book a niche act; for global stars Marquee proposes a tribute / listening night.
 function bookability(e) {
   if (e.popularity == null) return 'book';
   return e.popularity >= 0.97 ? 'tribute' : 'book';

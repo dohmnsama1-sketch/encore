@@ -1,18 +1,18 @@
 {
-  "name": "encore",
+  "name": "marquee",
   "version": "2.0.0",
-  "description": "Encore: the AI programming director for independent venues. Reads your crowd's cultural taste from Qloo's taste graph and programmes a month of nights they over-index on.",
+  "description": "Marquee: the AI programming director for independent venues. Reads your crowd's cultural taste from Qloo's taste graph and programmes a month of nights they over-index on.",
   "main": "server.js",
-  "bin": { "encore-mcp": "bin/encore-mcp.js" },
+  "bin": { "marquee-mcp": "bin/marquee-mcp.js" },
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
     "test": "node --test test/",
-    "mcp": "node bin/encore-mcp.js",
+    "mcp": "node bin/marquee-mcp.js",
     "check:secrets": "node scripts/check-secrets.js"
   },
   "engines": { "node": ">=18" },
-  "repository": { "type": "git", "url": "https://github.com/dohmnsama1-sketch/encore.git" },
+  "repository": { "type": "git", "url": "https://github.com/dohmnsama1-sketch/marquee.git" },
   "keywords": ["qloo", "agent", "mcp", "taste", "venues", "events", "hackathon"],
   "author": "Dodi Abak",
   "license": "MIT"
