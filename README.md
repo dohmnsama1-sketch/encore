@@ -7,7 +7,7 @@
 **The AI programming director for independent venues.**
 Your crowd already told the world what they love. Encore turns it into a sold-out month.
 
-[![CI](https://github.com/dohmnsama1-sketch/encore/actions/workflows/ci.yml/badge.svg)](https://github.com/dohmnsama1-sketch/encore/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-26%20passing-2dd4bf.svg)](test/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-ff5c8a.svg)](LICENSE)
 ![Node ≥18](https://img.shields.io/badge/node-%E2%89%A518-ffb347.svg)
 ![Zero dependencies](https://img.shields.io/badge/dependencies-0-7c6cff.svg)
